@@ -1,0 +1,57 @@
+# ===================================================
+# Entornos y Secretos
+# ===================================================
+.env
+.env*.local
+*.env
+!.env.example
+
+# ===================================================
+# Python / Django
+# ===================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.sqlite3
+staticfiles/
+media/
+*.log
+.pytest_cache/
+env/
+venv/
+.venv/
+
+# ===================================================
+# Node / React / Vite
+# ===================================================
+node_modules/
+frontend-portal/node_modules/
+frontend-portal/dist/
+frontend-portal/dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+
+# ===================================================
+# IDEs y Archivos de Sistema Operativo
+# ===================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===================================================
+# Archivos de Proyecto Obligatorios (No ignorar)
+# ===================================================
+!docker-compose.yml
+!.env.example
+!README.md
