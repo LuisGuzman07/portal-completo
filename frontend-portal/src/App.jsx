@@ -8,10 +8,6 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 
 // Public Pages
 import HomePage from './pages/public/HomePage';
-import RepositorioPage from './pages/public/RepositorioPage';
-import DetallePublicacionPage from './pages/public/DetallePublicacionPage';
-import BusquedaSemanticaPage from './pages/public/BusquedaSemanticaPage';
-import InvestigadoresPage from './pages/public/InvestigadoresPage';
 import AccesoMiembrosPage from './pages/auth/AccesoMiembrosPage';
 
 // Admin Pages
@@ -39,10 +35,6 @@ export default function App() {
         {/* Public Routes with Header & Footer */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/repositorio-academico" element={<RepositorioPage />} />
-          <Route path="/detalle-publicacion" element={<DetallePublicacionPage />} />
-          <Route path="/busqueda-semantica-pln" element={<BusquedaSemanticaPage />} />
-          <Route path="/investigadores" element={<InvestigadoresPage />} />
           <Route path="/acceso-miembros" element={<AccesoMiembrosPage />} />
         </Route>
 

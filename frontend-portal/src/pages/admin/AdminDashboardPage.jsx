@@ -42,7 +42,7 @@ export default function AdminDashboardPage() {
                 <span className="material-symbols-outlined text-2xl">group</span>
               </div>
               <h3 className="text-base font-bold text-primary group-hover:text-primary-container">
-                Administrar Usuarios (CU04)
+                Administración de Usuarios
               </h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
                 Listar, buscar, filtrar, crear, editar, activar/desactivar cuentas y asignar roles institucionales.
@@ -65,7 +65,7 @@ export default function AdminDashboardPage() {
                 <span className="material-symbols-outlined text-2xl">shield_person</span>
               </div>
               <h3 className="text-base font-bold text-primary group-hover:text-primary-container">
-                Roles y Permisos (CU05)
+                Roles y Permisos
               </h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
                 Configuración del modelo de control de acceso RBAC. Inspección y asignación de permisos por rol.
@@ -106,10 +106,10 @@ export default function AdminDashboardPage() {
       <div className="p-6 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-3">
         <h4 className="text-sm font-bold text-primary flex items-center gap-2">
           <span className="material-symbols-outlined text-base text-secondary">info</span>
-          Alcance de esta Fase (CU01–CU05)
+          Alcance de la Plataforma Institucional
         </h4>
         <p className="text-xs text-on-surface-variant leading-relaxed">
-          En esta primera fase se encuentran plenamente operativas las funciones de registro de cuenta (CU01), inicio de sesión con tokens JWT (CU02), cierre seguro de sesión (CU03), administración de usuarios con salvaguardas críticas (CU04) y administración de roles y permisos RBAC (CU05). Los restantes casos de uso (CU06–CU27) se mantendrán en preparación sin módulos ficticios.
+          Se encuentran plenamente operativas las funciones de registro de cuenta, autenticación con tokens JWT, cierre seguro de sesión, administración de usuarios con salvaguardas institucionales y gestión de control de acceso basada en roles y permisos (RBAC).
         </p>
       </div>
     </div>

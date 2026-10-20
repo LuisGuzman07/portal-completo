@@ -77,11 +77,11 @@ export default function AdminAuditoriaPage() {
             <option value="LOGIN_EXITOSO">Inicios de Sesión Exitosos</option>
             <option value="LOGIN_FALLIDO">Inicios de Sesión Fallidos</option>
             <option value="LOGOUT">Cierres de Sesión</option>
-            <option value="REGISTRO_CUENTA">Registros Públicos (CU01)</option>
-            <option value="CREAR_USUARIO_ADMIN">Creación Admin (CU04)</option>
+            <option value="REGISTRO_CUENTA">Registros Públicos</option>
+            <option value="CREAR_USUARIO_ADMIN">Creación de Cuentas Administrativas</option>
             <option value="ACTUALIZAR_USUARIO">Actualización de Usuarios</option>
-            <option value="ASIGNAR_ROLES_A_USUARIO">Cambios de Roles (CU05)</option>
-            <option value="ASIGNAR_PERMISOS_A_ROL">Cambios de Permisos (CU05)</option>
+            <option value="ASIGNAR_ROLES_A_USUARIO">Cambios de Roles</option>
+            <option value="ASIGNAR_PERMISOS_A_ROL">Cambios de Permisos</option>
           </select>
 
           <button

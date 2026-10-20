@@ -98,21 +98,19 @@ export default function DashboardLayout() {
               <span>Panel de Control</span>
             </Link>
 
-            {/* Administrar Usuarios (CU04) */}
+            {/* Administrar Usuarios */}
             {(isSuperAdmin || hasPermission('usuarios.listar')) && (
               <Link to="/dashboard/usuarios" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/usuarios')}>
                 <span className="material-symbols-outlined text-xl">group</span>
                 <span>Gestión de Usuarios</span>
-                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">CU04</span>
               </Link>
             )}
 
-            {/* Administrar Roles y Permisos (CU05) */}
+            {/* Administrar Roles y Permisos */}
             {(isSuperAdmin || hasPermission('roles.listar')) && (
               <Link to="/dashboard/roles" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/roles')}>
                 <span className="material-symbols-outlined text-xl">shield_person</span>
                 <span>Roles y Permisos</span>
-                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">CU05</span>
               </Link>
             )}
 
@@ -132,11 +130,6 @@ export default function DashboardLayout() {
               <span className="material-symbols-outlined text-xl">public</span>
               <span>Portal Académico Público</span>
             </Link>
-
-            <Link to="/repositorio-academico" className="flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
-              <span className="material-symbols-outlined text-xl">menu_book</span>
-              <span>Repositorio Digital</span>
-            </Link>
           </nav>
 
           {/* Footer logout */}
@@ -146,7 +139,7 @@ export default function DashboardLayout() {
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-low hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-bold text-xs uppercase tracking-wider transition-colors"
             >
               <span className="material-symbols-outlined text-lg">logout</span>
-              <span>Cerrar Sesión (CU03)</span>
+              <span>Cerrar Sesión</span>
             </button>
           </div>
         </div>

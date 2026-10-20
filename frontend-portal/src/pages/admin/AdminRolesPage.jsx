@@ -96,7 +96,7 @@ export default function AdminRolesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-primary tracking-tight">Administración de Roles y Permisos (CU05)</h1>
+        <h1 className="text-2xl font-bold text-primary tracking-tight">Administración de Roles y Permisos</h1>
         <p className="text-xs text-on-surface-variant mt-1">
           Control de acceso basado en roles (RBAC). Los permisos efectivos se evalúan estrictamente en el backend.
         </p>
@@ -206,7 +206,7 @@ export default function AdminRolesPage() {
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-on-tertiary-container hover:bg-tertiary-container text-on-tertiary font-bold text-xs shadow-xs transition-all disabled:opacity-50 self-start sm:self-auto"
                   >
                     <span className="material-symbols-outlined text-base">save</span>
-                    <span>{saving ? 'Guardando...' : 'Guardar Permisos (CU05)'}</span>
+                    <span>{saving ? 'Guardando...' : 'Guardar Permisos'}</span>
                   </button>
                 </div>
 

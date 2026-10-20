@@ -169,7 +169,7 @@ export default function AdminUsuariosPage() {
       {/* Header and Create Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-primary tracking-tight">Administración de Usuarios (CU04)</h1>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">Administración de Usuarios</h1>
           <p className="text-xs text-on-surface-variant mt-1">
             Gestión técnica y control de acceso RBAC. Operaciones protegidas y auditadas en tiempo real.
           </p>
@@ -350,7 +350,7 @@ export default function AdminUsuariosPage() {
                           {/* Assign roles button */}
                           <button
                             onClick={() => openRolesModal(u)}
-                            title="Asignar o revocar roles (CU05)"
+                            title="Asignar o revocar roles"
                             className="p-1.5 rounded hover:bg-surface-container text-secondary transition-colors"
                           >
                             <span className="material-symbols-outlined text-base">shield_person</span>
@@ -562,7 +562,7 @@ export default function AdminUsuariosPage() {
         </div>
       )}
 
-      {/* MODAL 3: Asignar Roles (CU04 / CU05) */}
+      {/* MODAL 3: Asignar Roles */}
       {rolesModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 bg-on-surface/50 flex items-center justify-center p-4">
           <div className="bg-surface-container-lowest rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-outline-variant/30">
