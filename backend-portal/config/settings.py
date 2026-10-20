@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'apps.roles',
     'apps.audit',
     'apps.common',
+    'apps.academics',
 ]
 
 MIDDLEWARE = [

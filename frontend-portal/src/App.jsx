@@ -8,6 +8,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 
 // Public Pages
 import HomePage from './pages/public/HomePage';
+import InvestigadoresPage from './pages/public/InvestigadoresPage';
 import AccesoMiembrosPage from './pages/auth/AccesoMiembrosPage';
 
 // Admin Pages
@@ -15,6 +16,9 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsuariosPage from './pages/admin/AdminUsuariosPage';
 import AdminRolesPage from './pages/admin/AdminRolesPage';
 import AdminAuditoriaPage from './pages/admin/AdminAuditoriaPage';
+import AcademicProfilePage from './pages/academic/AcademicProfilePage';
+import AdminInvestigadoresPage from './pages/academic/AdminInvestigadoresPage';
+import AdminMiembrosPage from './pages/academic/AdminMiembrosPage';
 
 function PublicLayout() {
   return (
@@ -35,6 +39,7 @@ export default function App() {
         {/* Public Routes with Header & Footer */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/investigadores" element={<InvestigadoresPage />} />
           <Route path="/acceso-miembros" element={<AccesoMiembrosPage />} />
         </Route>
 
@@ -48,6 +53,9 @@ export default function App() {
           }
         >
           <Route index element={<AdminDashboardPage />} />
+          <Route path="perfil-academico" element={<AcademicProfilePage />} />
+          <Route path="investigadores" element={<AdminInvestigadoresPage />} />
+          <Route path="miembros" element={<AdminMiembrosPage />} />
           <Route path="usuarios" element={<AdminUsuariosPage />} />
           <Route path="roles" element={<AdminRolesPage />} />
           <Route path="auditoria" element={<AdminAuditoriaPage />} />

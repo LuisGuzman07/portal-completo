@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function DashboardLayout() {
-  const { user, isSuperAdmin, hasPermission, logout } = useAuth();
+  const { user, isSuperAdmin, isAdminAcademico, hasPermission, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -97,6 +97,25 @@ export default function DashboardLayout() {
               <span className="material-symbols-outlined text-xl">grid_view</span>
               <span>Panel de Control</span>
             </Link>
+
+            <Link to="/dashboard/perfil-academico" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/perfil-academico')}>
+              <span className="material-symbols-outlined text-xl">school</span>
+              <span>Mi Perfil Académico</span>
+            </Link>
+
+            {(isSuperAdmin || isAdminAcademico) && (
+              <Link to="/dashboard/investigadores" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/investigadores')}>
+                <span className="material-symbols-outlined text-xl">manage_search</span>
+                <span>Gestión de Investigadores</span>
+              </Link>
+            )}
+
+            {(isSuperAdmin || isAdminAcademico) && (
+              <Link to="/dashboard/miembros" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/miembros')}>
+                <span className="material-symbols-outlined text-xl">groups</span>
+                <span>Miembros ABOCCRIM</span>
+              </Link>
+            )}
 
             {/* Administrar Usuarios */}
             {(isSuperAdmin || hasPermission('usuarios.listar')) && (

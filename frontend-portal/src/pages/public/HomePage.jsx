@@ -52,6 +52,10 @@ export default function HomePage() {
                   </Link>
                 </>
               )}
+              <Link to="/investigadores" className="px-5 py-3 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-primary font-bold text-sm border border-outline-variant/30 transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">groups</span>
+                <span>Consultar investigadores</span>
+              </Link>
             </div>
           </div>
 

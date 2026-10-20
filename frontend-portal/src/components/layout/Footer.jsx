@@ -39,6 +39,11 @@ export default function Footer() {
             <h3 className="text-base font-bold text-on-surface mb-space-md">Acceso y Gestión</h3>
             <ul className="space-y-space-sm text-sm text-on-surface-variant">
               <li>
+                <Link to="/investigadores" className="hover:text-primary transition-colors font-medium">
+                  Directorio de Investigadores
+                </Link>
+              </li>
+              <li>
                 <Link to="/acceso-miembros" className="hover:text-primary transition-colors font-medium">
                   Portal de Acceso
                 </Link>
