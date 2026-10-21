@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function AdminDashboardPage() {
-  const { user, isSuperAdmin, hasPermission } = useAuth();
+  const { user, isSuperAdmin, isAdminAcademico, hasPermission } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -31,7 +31,78 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* Mi Perfil Académico (CU06) */}
+        <Link
+          to="/dashboard/perfil-academico"
+          className="p-6 rounded-xl bg-surface-container-lowest border border-outline-variant/20 shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between group"
+        >
+          <div className="space-y-2">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+              <span className="material-symbols-outlined text-2xl">school</span>
+            </div>
+            <h3 className="text-base font-bold text-primary group-hover:text-primary-container">
+              Mi Perfil Académico
+            </h3>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Gestionar grado académico, filiación institucional, especialidad, biografía científica y registro ORCID.
+            </p>
+          </div>
+          <div className="pt-4 flex items-center gap-1 text-xs font-bold text-secondary group-hover:translate-x-1 transition-transform">
+            <span>Ver mi perfil</span>
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </div>
+        </Link>
+
+        {/* Gestión de Investigadores (CU07) */}
+        {(isSuperAdmin || isAdminAcademico) && (
+          <Link
+            to="/dashboard/investigadores"
+            className="p-6 rounded-xl bg-surface-container-lowest border border-outline-variant/20 shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between group"
+          >
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center group-hover:bg-secondary group-hover:text-on-secondary transition-colors">
+                <span className="material-symbols-outlined text-2xl">manage_search</span>
+              </div>
+              <h3 className="text-base font-bold text-primary group-hover:text-primary-container">
+                Gestión de Investigadores
+              </h3>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                Aprobación, revisión, vinculación de áreas temáticas y publicación en el directorio institucional.
+              </p>
+            </div>
+            <div className="pt-4 flex items-center gap-1 text-xs font-bold text-secondary group-hover:translate-x-1 transition-transform">
+              <span>Administrar investigadores</span>
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </div>
+          </Link>
+        )}
+
+        {/* Miembros ABOCCRIM (CU09) */}
+        {(isSuperAdmin || isAdminAcademico) && (
+          <Link
+            to="/dashboard/miembros"
+            className="p-6 rounded-xl bg-surface-container-lowest border border-outline-variant/20 shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between group"
+          >
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-on-tertiary-container/10 text-on-tertiary-container flex items-center justify-center group-hover:bg-on-tertiary-container group-hover:text-on-tertiary transition-colors">
+                <span className="material-symbols-outlined text-2xl">groups</span>
+              </div>
+              <h3 className="text-base font-bold text-primary group-hover:text-primary-container">
+                Miembros ABOCCRIM
+              </h3>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                Gestión del padrón institucional de miembros colegiados, categorías y estados de membresía.
+              </p>
+            </div>
+            <div className="pt-4 flex items-center gap-1 text-xs font-bold text-secondary group-hover:translate-x-1 transition-transform">
+              <span>Administrar miembros</span>
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </div>
+          </Link>
+        )}
+
+        {/* Administrar Usuarios (CU04) */}
         {(isSuperAdmin || hasPermission('usuarios.listar')) && (
           <Link
             to="/dashboard/usuarios"
@@ -55,6 +126,7 @@ export default function AdminDashboardPage() {
           </Link>
         )}
 
+        {/* Roles y Permisos (CU05) */}
         {(isSuperAdmin || hasPermission('roles.listar')) && (
           <Link
             to="/dashboard/roles"
@@ -78,6 +150,7 @@ export default function AdminDashboardPage() {
           </Link>
         )}
 
+        {/* Bitácora de Auditoría */}
         {(isSuperAdmin || hasPermission('auditoria.listar')) && (
           <Link
             to="/dashboard/auditoria"
@@ -109,7 +182,7 @@ export default function AdminDashboardPage() {
           Alcance de la Plataforma Institucional
         </h4>
         <p className="text-xs text-on-surface-variant leading-relaxed">
-          Se encuentran plenamente operativas las funciones de registro de cuenta, autenticación con tokens JWT, cierre seguro de sesión, administración de usuarios con salvaguardas institucionales y gestión de control de acceso basada en roles y permisos (RBAC).
+          Se encuentran plenamente operativas las funciones de autenticación JWT y cierre de sesión seguro, gestión técnica de usuarios, control de acceso basado en roles y permisos (RBAC), gestión de perfil académico propio, administración colegiada de investigadores y miembros ABOCCRIM, y directorio público de investigadores.
         </p>
       </div>
     </div>
