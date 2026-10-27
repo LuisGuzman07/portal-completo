@@ -64,16 +64,37 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'aboccrim_db'),
-        'USER': os.getenv('POSTGRES_USER', 'aboccrim_user'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'aboccrim_password'),
-        'HOST': os.getenv('POSTGRES_HOST', 'db'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    import urllib.parse
+    parsed_db = urllib.parse.urlparse(DATABASE_URL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': parsed_db.path.lstrip('/'),
+            'USER': parsed_db.username,
+            'PASSWORD': parsed_db.password,
+            'HOST': parsed_db.hostname,
+            'PORT': parsed_db.port or 5432,
+            'OPTIONS': {
+                'sslmode': 'require'
+            } if ('sslmode=require' in DATABASE_URL or os.getenv('POSTGRES_SSLMODE') == 'require') else {}
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'aboccrim_db'),
+            'USER': os.getenv('POSTGRES_USER', 'aboccrim_user'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'aboccrim_password'),
+            'HOST': os.getenv('POSTGRES_HOST', 'db'),
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            'OPTIONS': {
+                'sslmode': 'require'
+            } if os.getenv('POSTGRES_SSLMODE') == 'require' else {}
+        }
+    }
 
 AUTH_USER_MODEL = 'accounts.Usuario'
 
