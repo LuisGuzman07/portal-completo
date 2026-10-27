@@ -18,11 +18,6 @@ export default function Footer() {
             <p className="text-sm text-on-surface-variant max-w-md leading-relaxed">
               Sociedad civil de carácter científico, técnico e investigativo constituida formalmente para fomentar, regular y profundizar los estudios de las ciencias penales, criminológicas y forenses en el Estado Plurinacional de Bolivia y la región andina.
             </p>
-            <div className="flex items-center gap-space-sm text-xs text-on-surface-variant pt-space-xs">
-              <span className="px-2 py-1 rounded bg-surface-container-high text-primary font-semibold">
-                Registro Científico Académico No. 4920-BO
-              </span>
-            </div>
           </div>
 
           <div>
@@ -59,11 +54,7 @@ export default function Footer() {
         </div>
 
         <div className="pt-space-lg flex flex-col md:flex-row items-center justify-between gap-space-md text-xs text-on-surface-variant">
-          <div>© 2025 Academia Boliviana de Ciencias Criminológicas (ABOCCRIM). Todos los derechos reservados.</div>
-          <div className="flex items-center gap-space-lg">
-            <span>Acreditación Académica CONAC</span>
-            <span>Estado Plurinacional de Bolivia</span>
-          </div>
+          <div>© 2026 Academia Boliviana de Ciencias Criminológicas (ABOCCRIM). Todos los derechos reservados.</div>
         </div>
       </div>
     </footer>

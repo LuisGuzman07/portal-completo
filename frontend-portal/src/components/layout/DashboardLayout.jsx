@@ -103,6 +103,18 @@ export default function DashboardLayout() {
               <span>Mi Perfil Académico</span>
             </Link>
 
+            <Link to="/dashboard/publicaciones" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/publicaciones')}>
+              <span className="material-symbols-outlined text-xl">menu_book</span>
+              <span>Gestión de Publicaciones</span>
+            </Link>
+
+            {(isSuperAdmin || isAdminAcademico || user?.roles_codigos?.includes('comite_academico')) && (
+              <Link to="/dashboard/revisiones" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/revisiones')}>
+                <span className="material-symbols-outlined text-xl">rate_review</span>
+                <span>Revisión de Publicaciones</span>
+              </Link>
+            )}
+
             {(isSuperAdmin || isAdminAcademico) && (
               <Link to="/dashboard/investigadores" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/investigadores')}>
                 <span className="material-symbols-outlined text-xl">manage_search</span>
@@ -144,6 +156,11 @@ export default function DashboardLayout() {
             <div className="px-3 pt-4 pb-1 text-[11px] font-bold text-outline uppercase tracking-wider">
               Enlaces Externos
             </div>
+
+            <Link to="/repositorio" className="flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
+              <span className="material-symbols-outlined text-xl">local_library</span>
+              <span>Repositorio Académico</span>
+            </Link>
 
             <Link to="/" className="flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
               <span className="material-symbols-outlined text-xl">public</span>

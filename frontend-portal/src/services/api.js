@@ -5,9 +5,12 @@ export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem('aboccrim_token');
 
   const headers = {
-    'Content-Type': 'application/json',
     ...(options.headers || {})
   };
+
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -193,3 +196,109 @@ export const memberService = {
   updateCategory: (id, data) => apiRequest(`/academic/member-categories/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteCategory: (id) => apiRequest(`/academic/member-categories/${id}/`, { method: 'DELETE' }),
 };
+
+export const publicationService = {
+  list: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/publications/${query ? `?${query}` : ''}`);
+  },
+  get: (id) => apiRequest(`/publications/${id}/`),
+  create: (data) => {
+    const isFormData = data instanceof FormData;
+    return apiRequest('/publications/', {
+      method: 'POST',
+      body: isFormData ? data : JSON.stringify(data)
+    });
+  },
+  update: (id, data) => {
+    const isFormData = data instanceof FormData;
+    return apiRequest(`/publications/${id}/`, {
+      method: 'PUT',
+      body: isFormData ? data : JSON.stringify(data)
+    });
+  },
+
+  // Clasificación (CU15)
+  listTypes: () => apiRequest('/publications/types/'),
+  listDocTypes: () => apiRequest('/publications/document-types/'),
+  listCategories: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/publications/categories/${query ? `?${query}` : ''}`);
+  },
+  createCategory: (data) => apiRequest('/publications/categories/', { method: 'POST', body: JSON.stringify(data) }),
+  listKeywords: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/publications/keywords/${query ? `?${query}` : ''}`);
+  },
+  listAvailableInvestigators: () => apiRequest('/publications/investigators/'),
+
+  // Documentos Digitales (CU14 y CU13)
+  listDocuments: (pubId) => apiRequest(`/publications/${pubId}/documents/`),
+  uploadDocument: (pubId, formData) => apiRequest(`/publications/${pubId}/documents/`, {
+    method: 'POST',
+    body: formData
+  }),
+  getDocument: (docId) => apiRequest(`/publications/documents/${docId}/`),
+  updateDocument: (docId, data) => apiRequest(`/publications/documents/${docId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  }),
+  replaceDocument: (docId, formData) => apiRequest(`/publications/documents/${docId}/replace/`, {
+    method: 'POST',
+    body: formData
+  }),
+  deleteDocument: (docId) => apiRequest(`/publications/documents/${docId}/`, {
+    method: 'DELETE'
+  }),
+  downloadDocumentBlob: async (docId, filename = 'documento.pdf') => {
+    const token = localStorage.getItem('aboccrim_token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/publications/documents/${docId}/download/`, { headers });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al descargar el documento.');
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+  previewDocumentBlob: async (docId) => {
+    const token = localStorage.getItem('aboccrim_token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/publications/documents/${docId}/download/?inline=1`, { headers });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al abrir el documento.');
+    }
+    const blob = await response.blob();
+    const fileUrl = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+    window.open(fileUrl, '_blank');
+  },
+
+  // Revisión Académica (CU11)
+  listReviewQueue: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/publications/review-queue/${query ? `?${query}` : ''}`);
+  },
+  reviewPublication: (id, data) => apiRequest(`/publications/${id}/review/`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+};
+
+export const repositoryService = {
+  list: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repository/${query ? `?${query}` : ''}`);
+  },
+  get: (id) => apiRequest(`/repository/${id}/`),
+};
+

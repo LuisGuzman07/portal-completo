@@ -13,7 +13,7 @@ export default function HomePage() {
           <div className="lg:col-span-7 space-y-space-md">
             <div className="inline-flex items-center gap-space-xs px-3 py-1.5 rounded-full bg-surface-container-high text-primary text-xs font-semibold">
               <span className="material-symbols-outlined text-sm text-primary-container">verified</span>
-              <span>Sociedad Científica • Bolivia • Registro Académico Oficial No. 4920-BO</span>
+              <span>Sociedad Científica • Bolivia</span>
             </div>
 
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-primary leading-tight">

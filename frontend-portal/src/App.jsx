@@ -9,6 +9,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 // Public Pages
 import HomePage from './pages/public/HomePage';
 import InvestigadoresPage from './pages/public/InvestigadoresPage';
+import RepositorioAcademicoPage from './pages/public/RepositorioAcademicoPage';
 import AccesoMiembrosPage from './pages/auth/AccesoMiembrosPage';
 
 // Admin Pages
@@ -19,6 +20,8 @@ import AdminAuditoriaPage from './pages/admin/AdminAuditoriaPage';
 import AcademicProfilePage from './pages/academic/AcademicProfilePage';
 import AdminInvestigadoresPage from './pages/academic/AdminInvestigadoresPage';
 import AdminMiembrosPage from './pages/academic/AdminMiembrosPage';
+import AdminPublicacionesPage from './pages/publications/AdminPublicacionesPage';
+import RevisionPublicacionesPage from './pages/publications/RevisionPublicacionesPage';
 
 function PublicLayout() {
   return (
@@ -40,6 +43,7 @@ export default function App() {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/investigadores" element={<InvestigadoresPage />} />
+          <Route path="/repositorio" element={<RepositorioAcademicoPage />} />
           <Route path="/acceso-miembros" element={<AccesoMiembrosPage />} />
         </Route>
 
@@ -54,6 +58,8 @@ export default function App() {
         >
           <Route index element={<AdminDashboardPage />} />
           <Route path="perfil-academico" element={<AcademicProfilePage />} />
+          <Route path="publicaciones" element={<AdminPublicacionesPage />} />
+          <Route path="revisiones" element={<RevisionPublicacionesPage />} />
           <Route path="investigadores" element={<AdminInvestigadoresPage />} />
           <Route path="miembros" element={<AdminMiembrosPage />} />
           <Route path="usuarios" element={<AdminUsuariosPage />} />

@@ -32,7 +32,7 @@ export default function AdminDashboardPage() {
 
       {/* Quick Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {/* Mi Perfil Académico (CU06) */}
+        {/* Mi Perfil Académico */}
         <Link
           to="/dashboard/perfil-academico"
           className="p-6 rounded-xl bg-surface-container-lowest border border-outline-variant/20 shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between group"
@@ -53,6 +53,52 @@ export default function AdminDashboardPage() {
             <span className="material-symbols-outlined text-sm">arrow_forward</span>
           </div>
         </Link>
+
+        {/* Gestión de Publicaciones */}
+        <Link
+          to="/dashboard/publicaciones"
+          className="p-6 rounded-xl bg-surface-container-lowest border border-outline-variant/20 shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between group"
+        >
+          <div className="space-y-2">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+              <span className="material-symbols-outlined text-2xl">menu_book</span>
+            </div>
+            <h3 className="text-base font-bold text-primary group-hover:text-primary-container">
+              Gestión de Publicaciones
+            </h3>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Registro científico, clasificación temática y administración de documentos digitales en formato PDF.
+            </p>
+          </div>
+          <div className="pt-4 flex items-center gap-1 text-xs font-bold text-secondary group-hover:translate-x-1 transition-transform">
+            <span>Ver publicaciones</span>
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </div>
+        </Link>
+
+        {/* Revisión de Publicaciones (CU11) */}
+        {(isSuperAdmin || isAdminAcademico || user?.roles_codigos?.includes('comite_academico')) && (
+          <Link
+            to="/dashboard/revisiones"
+            className="p-6 rounded-xl bg-surface-container-lowest border border-outline-variant/20 shadow-xs hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between group"
+          >
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-2xl">rate_review</span>
+              </div>
+              <h3 className="text-base font-bold text-primary group-hover:text-primary-container">
+                Revisión Editorial y Pares
+              </h3>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                Dictamen técnico, evaluación por pares, aprobación, observaciones y rechazo formal de investigaciones.
+              </p>
+            </div>
+            <div className="pt-4 flex items-center gap-1 text-xs font-bold text-secondary group-hover:translate-x-1 transition-transform">
+              <span>Evaluar cola editorial</span>
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </div>
+          </Link>
+        )}
 
         {/* Gestión de Investigadores (CU07) */}
         {(isSuperAdmin || isAdminAcademico) && (
@@ -78,7 +124,7 @@ export default function AdminDashboardPage() {
           </Link>
         )}
 
-        {/* Miembros ABOCCRIM (CU09) */}
+        {/* Miembros ABOCCRIM */}
         {(isSuperAdmin || isAdminAcademico) && (
           <Link
             to="/dashboard/miembros"

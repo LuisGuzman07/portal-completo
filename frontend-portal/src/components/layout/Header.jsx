@@ -46,6 +46,7 @@ export default function Header() {
         <nav className="hidden md:flex items-center gap-space-sm">
           <Link to="/" className={navLinkClass("/")}>Inicio</Link>
           <Link to="/investigadores" className={navLinkClass("/investigadores")}>Investigadores</Link>
+          <Link to="/repositorio" className={navLinkClass("/repositorio")}>Repositorio</Link>
           {!isAuthenticated && (
             <Link to="/acceso-miembros" className={navLinkClass("/acceso-miembros")}>Acceso a Miembros</Link>
           )}
@@ -111,6 +112,7 @@ export default function Header() {
         <div className="md:hidden bg-surface-container-lowest border-t border-outline-variant/20 px-4 py-3 flex flex-col gap-2">
           <Link onClick={() => setMobileMenuOpen(false)} to="/" className={navLinkClass("/")}>Inicio</Link>
           <Link onClick={() => setMobileMenuOpen(false)} to="/investigadores" className={navLinkClass("/investigadores")}>Directorio de Investigadores</Link>
+          <Link onClick={() => setMobileMenuOpen(false)} to="/repositorio" className={navLinkClass("/repositorio")}>Repositorio Académico</Link>
           {!isAuthenticated ? (
             <Link onClick={() => setMobileMenuOpen(false)} to="/acceso-miembros" className={navLinkClass("/acceso-miembros")}>
               Acceso a Miembros
