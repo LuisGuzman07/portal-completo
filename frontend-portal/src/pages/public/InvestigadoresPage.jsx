@@ -136,7 +136,7 @@ export default function InvestigadoresPage() {
       </div>
 
       {selected && <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-on-surface/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
-        <section role="dialog" aria-modal="true" aria-labelledby="public-investigator-name" className="my-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-surface-container-lowest p-6 shadow-2xl md:p-8">
+        <section role="dialog" aria-modal="true" aria-labelledby="public-investigator-name" className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-2xl bg-surface-container-lowest p-4 shadow-2xl sm:p-6 md:p-8">
           <div className="mb-5 flex items-start justify-between gap-3">
             <div><p className="text-xs font-bold uppercase tracking-widest text-secondary">Perfil de investigador</p><h2 id="public-investigator-name" className="mt-1 text-2xl font-bold text-primary">{selected.nombres} {selected.apellidos}</h2></div>
             <button type="button" onClick={() => setSelected(null)} aria-label="Cerrar perfil" className="rounded-lg p-2 text-outline hover:bg-surface-container-low"><span className="material-symbols-outlined">close</span></button>

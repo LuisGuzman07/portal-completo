@@ -11,6 +11,7 @@ export default function RepositorioAcademicoPage() {
   const [types, setTypes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [investigators, setInvestigators] = useState([]);
+  const [hasActiveInstitutionalAccess, setHasActiveInstitutionalAccess] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,6 +29,18 @@ export default function RepositorioAcademicoPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState(null);
+
+  useEffect(() => {
+    let current = true;
+    if (!isAuthenticated) {
+      setHasActiveInstitutionalAccess(false);
+      return () => { current = false; };
+    }
+    repositoryService.accessStatus()
+      .then((access) => { if (current) setHasActiveInstitutionalAccess(Boolean(access.documentos_miembros)); })
+      .catch(() => { if (current) setHasActiveInstitutionalAccess(false); });
+    return () => { current = false; };
+  }, [isAuthenticated, user?.id]);
 
   // Load Catalogs on Mount
   useEffect(() => {
@@ -421,8 +434,8 @@ export default function RepositorioAcademicoPage() {
 
       {/* PUBLICATION DETAILS & DOCUMENT DOWNLOAD MODAL (CU12, CU13) */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/50 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-6 my-8 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 backdrop-blur-xs sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             {detailLoading || !selectedPub ? (
               <div className="p-12 text-center text-on-surface-variant text-sm flex flex-col items-center gap-3">
                 <span className="material-symbols-outlined text-3xl animate-spin text-primary">progress_activity</span>
@@ -557,8 +570,8 @@ export default function RepositorioAcademicoPage() {
                         {selectedPub.documentos?.map((doc) => {
                           const isRestricted = doc.nivel_acceso === 'restringido';
                           const isMembersOnly = doc.nivel_acceso === 'miembros';
-                          const canDownloadMembers = isAuthenticated;
-                          const canDownloadRestricted = hasStaffPrivileges || (user && selectedPub.registrada_por_email === user.email);
+                          const canDownloadMembers = hasStaffPrivileges || hasActiveInstitutionalAccess || selectedPub.es_propietario;
+                          const canDownloadRestricted = hasStaffPrivileges || selectedPub.es_propietario;
 
                           return (
                             <div
@@ -613,13 +626,13 @@ export default function RepositorioAcademicoPage() {
                                   </>
                                 ) : (
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-outline italic">Requiere inicio de sesión</span>
-                                    <Link
+                                    <span className="text-[10px] text-outline italic">{isAuthenticated ? 'Requiere membresía o acreditación activa' : 'Requiere inicio de sesión'}</span>
+                                    {!isAuthenticated && <Link
                                       to="/acceso-miembros"
                                       className="px-3 py-1.5 rounded-xl bg-secondary hover:bg-secondary/90 text-on-secondary text-xs font-bold"
                                     >
                                       Acceder
-                                    </Link>
+                                    </Link>}
                                   </div>
                                 )}
                               </div>

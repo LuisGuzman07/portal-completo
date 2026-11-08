@@ -6,6 +6,20 @@
   html, body {
     margin: 0;
     padding: 0;
+    width: 100%;
+    min-height: 100%;
+  }
+
+  body {
+    overflow-x: clip;
+  }
+
+  img, video, canvas, svg {
+    max-width: 100%;
+  }
+
+  input, select, textarea, button {
+    max-width: 100%;
   }
 }
 

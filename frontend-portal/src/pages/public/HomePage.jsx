@@ -56,6 +56,26 @@ export default function HomePage() {
                 <span className="material-symbols-outlined text-lg">groups</span>
                 <span>Consultar investigadores</span>
               </Link>
+              <Link to="/eventos" className="px-5 py-3 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-primary font-bold text-sm border border-outline-variant/30 transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">event</span>
+                <span>Eventos académicos</span>
+              </Link>
+              <Link to="/noticias" className="px-5 py-3 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-primary font-bold text-sm border border-outline-variant/30 transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">feed</span>
+                <span>Noticias institucionales</span>
+              </Link>
+              <Link to="/multimedia" className="px-5 py-3 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-primary font-bold text-sm border border-outline-variant/30 transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">perm_media</span>
+                <span>Contenido multimedia</span>
+              </Link>
+              <Link to="/convenios" className="px-5 py-3 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-primary font-bold text-sm border border-outline-variant/30 transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">handshake</span>
+                <span>Convenios institucionales</span>
+              </Link>
+              <Link to="/solicitud-incorporacion" className="px-5 py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-bold text-sm transition-all flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">person_add</span>
+                <span>Solicitar incorporación</span>
+              </Link>
             </div>
           </div>
 

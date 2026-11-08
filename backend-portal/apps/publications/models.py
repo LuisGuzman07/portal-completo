@@ -20,6 +20,7 @@ class Publicacion(models.Model):
         ('borrador', 'Borrador'),
         ('pendiente', 'Pendiente de Revisión'),
         ('en_revision', 'En Revisión'),
+        ('observada', 'Observada'),
         ('aprobada', 'Aprobada / Publicada'),
         ('rechazada', 'Rechazada'),
         ('retirada', 'Retirada'),
@@ -273,7 +274,7 @@ class DocumentoDigital(models.Model):
     mime = models.CharField(max_length=100, null=True, blank=True)
     tamano_bytes = models.BigIntegerField(null=True, blank=True)
     checksum_sha256 = models.CharField(max_length=64, null=True, blank=True)
-    nivel_acceso = models.CharField(max_length=30, default='restringido')
+    nivel_acceso = models.CharField(max_length=30, choices=NIVELES_ACCESO, default='restringido')
     fecha_carga = models.DateTimeField(auto_now_add=True)
 
     class Meta:

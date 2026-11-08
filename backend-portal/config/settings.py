@@ -31,6 +31,11 @@ INSTALLED_APPS = [
     'apps.common',
     'apps.academics',
     'apps.publications',
+      'apps.events',
+      'apps.multimedia',
+      'apps.news',
+      'apps.agreements',
+      'apps.incorporation',
 ]
 
 MIDDLEWARE = [

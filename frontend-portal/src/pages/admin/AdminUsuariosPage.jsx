@@ -225,11 +225,11 @@ export default function AdminUsuariosPage() {
           />
         </form>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="px-3 py-2 bg-surface-container-low text-on-surface rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+            className="w-full min-w-0 rounded-lg bg-surface-container-low px-3 py-2 text-xs font-semibold text-on-surface focus:outline-none cursor-pointer sm:w-auto sm:min-w-[150px]"
           >
             <option value="">Todos los Roles</option>
             {availableRoles.map((r) => (
@@ -240,7 +240,7 @@ export default function AdminUsuariosPage() {
           <select
             value={selectedActivo}
             onChange={(e) => setSelectedActivo(e.target.value)}
-            className="px-3 py-2 bg-surface-container-low text-on-surface rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+            className="w-full min-w-0 rounded-lg bg-surface-container-low px-3 py-2 text-xs font-semibold text-on-surface focus:outline-none cursor-pointer sm:w-auto sm:min-w-[145px]"
           >
             <option value="">Todos los Estados</option>
             <option value="true">Activos</option>
@@ -250,7 +250,7 @@ export default function AdminUsuariosPage() {
           <button
             onClick={loadData}
             title="Recargar tabla"
-            className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-colors"
+            className="self-end rounded-lg bg-surface-container-low p-2 text-on-surface-variant transition-colors hover:bg-surface-container sm:self-auto"
           >
             <span className="material-symbols-outlined text-lg">refresh</span>
           </button>
@@ -260,7 +260,7 @@ export default function AdminUsuariosPage() {
       {/* Users Table */}
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/20 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[760px] text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low text-[11px] font-bold text-outline uppercase tracking-wider border-b border-outline-variant/20">
                 <th className="py-3 px-4">Usuario</th>
@@ -392,8 +392,8 @@ export default function AdminUsuariosPage() {
 
       {/* MODAL 1: Crear Usuario */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 bg-on-surface/50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-outline-variant/30">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
               <h3 className="text-base font-bold text-primary">Crear Nuevo Usuario (Admin)</h3>
               <button onClick={() => setCreateModalOpen(false)} className="text-outline hover:text-on-surface">
@@ -402,7 +402,7 @@ export default function AdminUsuariosPage() {
             </div>
 
             <form onSubmit={handleCreateSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div>
                   <label className="text-xs font-bold text-on-surface block mb-1">Nombres</label>
                   <input
@@ -450,7 +450,7 @@ export default function AdminUsuariosPage() {
 
               <div>
                 <label className="text-xs font-bold text-on-surface block mb-1">Roles a Asignar</label>
-                <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-surface-container-low rounded-lg">
+                <div className="grid max-h-36 grid-cols-1 gap-2 overflow-y-auto rounded-lg bg-surface-container-low p-2 sm:grid-cols-2">
                   {availableRoles.map((r) => (
                     <label key={r.codigo} className="flex items-center gap-1.5 text-xs cursor-pointer">
                       <input
@@ -494,8 +494,8 @@ export default function AdminUsuariosPage() {
 
       {/* MODAL 2: Editar Usuario */}
       {editModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 bg-on-surface/50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-outline-variant/30">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
               <h3 className="text-base font-bold text-primary">Editar Usuario</h3>
               <button onClick={() => setEditModalOpen(false)} className="text-outline hover:text-on-surface">
@@ -564,8 +564,8 @@ export default function AdminUsuariosPage() {
 
       {/* MODAL 3: Asignar Roles */}
       {rolesModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 bg-on-surface/50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-outline-variant/30">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
               <h3 className="text-base font-bold text-primary">Asignar Roles a Usuario</h3>
               <button onClick={() => setRolesModalOpen(false)} className="text-outline hover:text-on-surface">
@@ -631,8 +631,8 @@ export default function AdminUsuariosPage() {
 
       {/* MODAL 4: Confirmación Activar / Desactivar con Salvaguardas */}
       {toggleActiveModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 bg-on-surface/50 flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4 border border-outline-variant/30">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                 selectedUser.activo ? 'bg-error-container text-error' : 'bg-emerald-100 text-emerald-800'

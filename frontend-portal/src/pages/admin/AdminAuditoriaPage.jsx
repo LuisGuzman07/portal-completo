@@ -67,11 +67,11 @@ export default function AdminAuditoriaPage() {
           />
         </form>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
           <select
             value={accionFilter}
             onChange={(e) => setAccionFilter(e.target.value)}
-            className="px-3 py-2 bg-surface-container-low text-on-surface rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+            className="w-full min-w-0 rounded-lg bg-surface-container-low px-3 py-2 text-xs font-semibold text-on-surface focus:outline-none cursor-pointer sm:w-auto sm:min-w-[190px]"
           >
             <option value="">Todas las Acciones</option>
             <option value="LOGIN_EXITOSO">Inicios de Sesión Exitosos</option>
@@ -87,7 +87,7 @@ export default function AdminAuditoriaPage() {
           <button
             onClick={loadLogs}
             title="Recargar bitácora"
-            className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-colors"
+            className="self-end rounded-lg bg-surface-container-low p-2 text-on-surface-variant transition-colors hover:bg-surface-container sm:self-auto"
           >
             <span className="material-symbols-outlined text-lg">refresh</span>
           </button>
@@ -97,7 +97,7 @@ export default function AdminAuditoriaPage() {
       {/* Logs Table */}
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/20 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[900px] text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low text-[11px] font-bold text-outline uppercase tracking-wider border-b border-outline-variant/20">
                 <th className="py-3 px-4">Fecha y Hora</th>

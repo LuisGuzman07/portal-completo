@@ -415,7 +415,7 @@ export default function AdminPublicacionesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[960px] text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container-low text-[11px] font-bold text-outline uppercase tracking-wider border-b border-outline-variant/20">
                   <th className="py-3 px-4">Publicación y Metadatos</th>
@@ -522,8 +522,8 @@ export default function AdminPublicacionesPage() {
           MODAL: NUEVA PUBLICACIÓN CIENTÍFICA (CU10, CU14, CU15)
       ====================================================================== */}
       {pubModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col p-6 border border-outline-variant/30">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-xs sm:items-center sm:p-4">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl min-w-0 flex-col rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-2xl">post_add</span>
@@ -746,8 +746,8 @@ export default function AdminPublicacionesPage() {
           MODAL: ADMINISTRAR DOCUMENTOS DIGITALES (CU14)
       ====================================================================== */}
       {docsModalOpen && selectedPub && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col p-6 space-y-4 border border-outline-variant/30">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-xs sm:items-center sm:p-4">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl min-w-0 flex-col space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-2xl">folder_managed</span>

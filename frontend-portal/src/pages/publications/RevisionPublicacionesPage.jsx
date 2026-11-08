@@ -282,7 +282,7 @@ export default function RevisionPublicacionesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[900px] text-left text-xs">
               <thead className="bg-surface-container-low border-b border-outline-variant/20 text-on-surface-variant font-bold uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Investigación / Título</th>
@@ -366,8 +366,8 @@ export default function RevisionPublicacionesPage() {
 
       {/* MODAL DE DICTAMEN TÉCNICO Y EVALUACIÓN */}
       {modalOpen && selectedPub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/50 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-6 my-8 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 backdrop-blur-xs sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-outline-variant/20 pb-4">
               <div>

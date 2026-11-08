@@ -39,6 +39,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link to="/solicitud-incorporacion" className="hover:text-primary transition-colors font-medium">
+                  Solicitar incorporación
+                </Link>
+              </li>
+              <li>
                 <Link to="/acceso-miembros" className="hover:text-primary transition-colors font-medium">
                   Portal de Acceso
                 </Link>

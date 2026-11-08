@@ -12,7 +12,7 @@ from .models import (
     TipoDocumento,
     TipoPublicacion,
 )
-from apps.academics.models import Investigador
+from apps.academics.models import Investigador, Miembro
 
 
 class TipoPublicacionSerializer(serializers.ModelSerializer):
@@ -64,6 +64,7 @@ class DocumentoDigitalSerializer(serializers.ModelSerializer):
     tipo_nombre = serializers.ReadOnlyField(source='tipo.nombre')
     cargado_por_email = serializers.ReadOnlyField(source='cargado_por.email')
     cargado_por_nombre = serializers.SerializerMethodField()
+    nivel_acceso = serializers.ChoiceField(choices=DocumentoDigital.NIVELES_ACCESO, required=False)
 
     class Meta:
         model = DocumentoDigital
@@ -201,6 +202,86 @@ class PublicacionDetailSerializer(PublicacionListSerializer):
             'documentos',
             'revisiones',
         ]
+
+
+class DocumentoRepositorioSerializer(serializers.ModelSerializer):
+    tipo_nombre = serializers.ReadOnlyField(source='tipo.nombre')
+
+    class Meta:
+        model = DocumentoDigital
+        fields = ['id', 'publicacion', 'tipo', 'tipo_nombre', 'titulo', 'nombre_original', 'mime', 'tamano_bytes', 'nivel_acceso', 'fecha_carga']
+
+
+class RevisionPropietarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RevisionPublicacion
+        fields = ['id', 'tipo_revision', 'observaciones', 'resultado_propuesto', 'fecha_revision']
+
+
+class PublicacionPublicaListSerializer(PublicacionListSerializer):
+    class Meta(PublicacionListSerializer.Meta):
+        fields = [field for field in PublicacionListSerializer.Meta.fields if field != 'registrada_por_email']
+
+    def get_documentos_count(self, obj):
+        request = self.context.get('request')
+        access = self._document_access(request.user if request else None, obj)
+        return obj.documentos.filter(nivel_acceso__in=access).count()
+
+    @staticmethod
+    def _document_access(user, publication):
+        if not user or not user.is_authenticated:
+            return ['publico']
+        if (
+            user.is_superuser
+            or user.has_role('superadmin')
+            or user.has_role('admin_academico')
+            or user.has_role('comite_academico')
+            or publication.registrada_por_id == user.id
+            or publication.autores.filter(investigador__perfil_academico__usuario_id=user.id).exists()
+        ):
+            return ['publico', 'miembros', 'restringido']
+        has_active_membership = Miembro.objects.filter(usuario_id=user.id, estado='activo').exists()
+        has_active_investigator = Investigador.objects.filter(
+            perfil_academico__usuario_id=user.id,
+            estado='activo',
+        ).exists()
+        return ['publico', 'miembros'] if has_active_membership or has_active_investigator else ['publico']
+
+
+class PublicacionPublicaDetailSerializer(PublicacionPublicaListSerializer):
+    documentos = serializers.SerializerMethodField()
+    es_propietario = serializers.SerializerMethodField()
+
+    class Meta(PublicacionPublicaListSerializer.Meta):
+        fields = PublicacionPublicaListSerializer.Meta.fields + [
+            'referencias', 'documentos', 'es_propietario',
+        ]
+
+    def get_es_propietario(self, obj):
+        request = self.context.get('request')
+        return bool(
+            request
+            and request.user.is_authenticated
+            and (
+                obj.registrada_por_id == request.user.id
+                or obj.autores.filter(
+                    investigador__perfil_academico__usuario_id=request.user.id
+                ).exists()
+            )
+        )
+
+    def get_documentos(self, obj):
+        request = self.context.get('request')
+        access = self._document_access(request.user if request else None, obj)
+        documents = obj.documentos.filter(nivel_acceso__in=access).select_related('tipo')
+        return DocumentoRepositorioSerializer(documents, many=True).data
+
+
+class PublicacionPropietarioDetailSerializer(PublicacionPublicaDetailSerializer):
+    revisiones = RevisionPropietarioSerializer(many=True, read_only=True)
+
+    class Meta(PublicacionPublicaDetailSerializer.Meta):
+        fields = PublicacionPublicaDetailSerializer.Meta.fields + ['revisiones']
 
 
 class PublicacionCreateUpdateSerializer(serializers.ModelSerializer):

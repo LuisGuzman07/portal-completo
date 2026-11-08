@@ -12,6 +12,7 @@ from .views import (
     PublicacionListCreateView,
     RepositorioDetailView,
     RepositorioListView,
+    RepositorioAccessStatusView,
     RevisionPublicacionActionView,
     RevisionPublicacionListView,
     TipoDocumentoListView,
@@ -36,6 +37,7 @@ urlpatterns = [
 
     # Repositorio Académico (CU12, CU16)
     path('repository/', RepositorioListView.as_view(), name='repository-list'),
+    path('repository/access-status/', RepositorioAccessStatusView.as_view(), name='repository-access-status'),
     path('repository/<int:pk>/', RepositorioDetailView.as_view(), name='repository-detail'),
 
     # Documentos Digitales y Descarga Segura (CU14, CU13)

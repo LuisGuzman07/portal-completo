@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
-from django.db import connection, transaction
+from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse
 from django.utils import timezone
@@ -13,7 +13,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from apps.academics.models import AreaTematica, Investigador
+from apps.academics.models import AreaTematica, Investigador, Miembro
 from apps.audit.models import registrar_auditoria
 from .models import (
     Autor,
@@ -33,17 +33,20 @@ from .models import (
 from .permissions import (
     CanManageDocument,
     CanManagePublication,
+    CanManagePublicationCatalog,
     CanRegisterPublication,
     CanReviewPublication,
 )
 from .serializers import (
-    AutorSerializer,
     CategoriaSerializer,
     DocumentoDigitalSerializer,
     PalabraClaveSerializer,
     PublicacionCreateUpdateSerializer,
     PublicacionDetailSerializer,
     PublicacionListSerializer,
+    PublicacionPublicaDetailSerializer,
+    PublicacionPublicaListSerializer,
+    PublicacionPropietarioDetailSerializer,
     RevisionPublicacionSerializer,
     TipoDocumentoSerializer,
     TipoPublicacionSerializer,
@@ -55,6 +58,30 @@ from .serializers import (
 # ==============================================================================
 
 MAX_FILE_SIZE = 26214400  # 25 MB
+
+
+def user_has_review_privileges(user):
+    return bool(
+        user and user.is_authenticated and (
+            user.is_superuser
+            or user.has_role('superadmin')
+            or user.has_role('admin_academico')
+            or user.has_role('comite_academico')
+        )
+    )
+
+
+def publication_is_owned_by(user, publication):
+    return bool(
+        user and user.is_authenticated and (
+            publication.registrada_por_id == user.id
+            or publication.autores.filter(investigador__perfil_academico__usuario_id=user.id).exists()
+        )
+    )
+
+
+def publication_is_visible_to(user, publication):
+    return user_has_review_privileges(user) or publication_is_owned_by(user, publication)
 
 
 def validate_and_save_pdf(file_obj, publicacion_id):
@@ -176,7 +203,7 @@ def ensure_catalogs_seeded():
 
 class TipoPublicacionListView(generics.ListCreateAPIView):
     serializer_class = TipoPublicacionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanManagePublicationCatalog]
     pagination_class = None
 
     def get_queryset(self):
@@ -186,7 +213,7 @@ class TipoPublicacionListView(generics.ListCreateAPIView):
 
 class TipoDocumentoListView(generics.ListCreateAPIView):
     serializer_class = TipoDocumentoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanManagePublicationCatalog]
     pagination_class = None
 
     def get_queryset(self):
@@ -196,7 +223,7 @@ class TipoDocumentoListView(generics.ListCreateAPIView):
 
 class CategoriaListCreateView(generics.ListCreateAPIView):
     serializer_class = CategoriaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanManagePublicationCatalog]
     pagination_class = None
 
     def get_queryset(self):
@@ -221,7 +248,7 @@ class CategoriaListCreateView(generics.ListCreateAPIView):
 
 class PalabraClaveListView(generics.ListCreateAPIView):
     serializer_class = PalabraClaveSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanManagePublicationCatalog]
     pagination_class = None
 
     def get_queryset(self):
@@ -234,7 +261,7 @@ class PalabraClaveListView(generics.ListCreateAPIView):
 
 class InvestigadoresDisponiblesAutoresView(views.APIView):
     """Retorna la lista de investigadores activos para asignarlos fácilmente como autores."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         qs = Investigador.objects.select_related(
@@ -249,7 +276,6 @@ class InvestigadoresDisponiblesAutoresView(views.APIView):
                 'nombre_completo': f'{u.nombres} {u.apellidos}'.strip(),
                 'nombres': u.nombres,
                 'apellidos': u.apellidos,
-                'email': u.email,
                 'institucion': p.institucion or 'ABOCCRIM',
                 'orcid': p.orcid or '',
             })
@@ -269,6 +295,12 @@ class PublicacionListCreateView(views.APIView):
         qs = Publicacion.objects.select_related('tipo', 'registrada_por').prefetch_related(
             'autores_relacion__autor', 'categorias__area', 'palabras_clave', 'documentos'
         )
+
+        if not user_has_review_privileges(request.user):
+            qs = qs.filter(
+                Q(registrada_por=request.user)
+                | Q(autores__investigador__perfil_academico__usuario=request.user)
+            ).distinct()
 
         # Filtros
         search = request.query_params.get('search', '').strip()
@@ -335,10 +367,7 @@ class PublicacionListCreateView(views.APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         # Estado inicial: 'pendiente' para entrar a revisión académica
-        pub = serializer.save(
-            registrada_por=request.user,
-            estado=data.get('estado', 'pendiente')
-        )
+        pub = serializer.save(registrada_por=request.user, estado='pendiente')
 
         # Vincular autor principal si viene investigador_id o autor_nombre
         investigador_id = data.get('investigador_id')
@@ -394,10 +423,12 @@ class PublicacionListCreateView(views.APIView):
                 PublicacionPalabra.objects.get_or_create(publicacion=pub, palabra=palabra)
 
         # CU14: Si se adjuntó archivo PDF directamente en el formulario
-        uploaded_doc = None
         archivo = request.FILES.get('archivo')
         if archivo:
             try:
+                access_level = data.get('documento_nivel_acceso', 'restringido')
+                if access_level not in dict(DocumentoDigital.NIVELES_ACCESO):
+                    raise ValueError('El nivel de acceso del documento no es válido.')
                 doc_tipo_id = data.get('documento_tipo_id')
                 if doc_tipo_id and str(doc_tipo_id).isdigit():
                     tipo_doc = TipoDocumento.objects.get(id=int(doc_tipo_id))
@@ -405,7 +436,7 @@ class PublicacionListCreateView(views.APIView):
                     tipo_doc = TipoDocumento.objects.first()
 
                 doc_meta = validate_and_save_pdf(archivo, pub.id)
-                uploaded_doc = DocumentoDigital.objects.create(
+                DocumentoDigital.objects.create(
                     publicacion=pub,
                     tipo=tipo_doc,
                     cargado_por=request.user,
@@ -415,7 +446,7 @@ class PublicacionListCreateView(views.APIView):
                     mime=doc_meta['mime'],
                     tamano_bytes=doc_meta['tamano_bytes'],
                     checksum_sha256=doc_meta['checksum_sha256'],
-                    nivel_acceso=data.get('documento_nivel_acceso', 'restringido'),
+                    nivel_acceso=access_level,
                 )
             except Exception as e:
                 # Si falla la validación del archivo, lanzar error para rollback
@@ -430,7 +461,12 @@ class PublicacionListCreateView(views.APIView):
             detalle=f'Publicación registrada: "{pub.titulo}" (estado={pub.estado}).',
         )
 
-        detail_serializer = PublicacionDetailSerializer(pub)
+        serializer_class = (
+            PublicacionDetailSerializer
+            if user_has_review_privileges(request.user)
+            else PublicacionPropietarioDetailSerializer
+        )
+        detail_serializer = serializer_class(pub, context={'request': request})
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -449,7 +485,14 @@ class PublicacionDetailView(views.APIView):
         pub = self.get_object(pk)
         if not pub:
             return Response({'detail': 'Publicación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = PublicacionDetailSerializer(pub)
+        if not publication_is_visible_to(request.user, pub):
+            return Response({'detail': 'No tiene autorización para consultar esta publicación.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer_class = (
+            PublicacionDetailSerializer
+            if user_has_review_privileges(request.user)
+            else PublicacionPropietarioDetailSerializer
+        )
+        serializer = serializer_class(pub, context={'request': request})
         return Response(serializer.data)
 
     @transaction.atomic
@@ -503,7 +546,12 @@ class PublicacionDetailView(views.APIView):
             detalle=f'Publicación actualizada: "{pub.titulo}" (estado={pub.estado}).',
         )
 
-        detail_serializer = PublicacionDetailSerializer(pub)
+        serializer_class = (
+            PublicacionDetailSerializer
+            if user_has_review_privileges(request.user)
+            else PublicacionPropietarioDetailSerializer
+        )
+        detail_serializer = serializer_class(pub, context={'request': request})
         return Response(detail_serializer.data)
 
 
@@ -520,6 +568,9 @@ class DocumentoDigitalListCreateView(views.APIView):
             pub = Publicacion.objects.get(pk=pub_id)
         except Publicacion.DoesNotExist:
             return Response({'detail': 'Publicación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not publication_is_visible_to(request.user, pub):
+            return Response({'detail': 'No tiene autorización para consultar los documentos de esta publicación.'}, status=status.HTTP_404_NOT_FOUND)
 
         docs = DocumentoDigital.objects.filter(publicacion=pub).select_related('tipo', 'cargado_por')
         serializer = DocumentoDigitalSerializer(docs, many=True)
@@ -540,6 +591,10 @@ class DocumentoDigitalListCreateView(views.APIView):
         if not archivo:
             return Response({'error': 'Debe seleccionar un archivo PDF para subir.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        nivel_acceso = request.data.get('nivel_acceso', 'restringido')
+        if nivel_acceso not in dict(DocumentoDigital.NIVELES_ACCESO):
+            return Response({'error': 'El nivel de acceso del documento no es válido.'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             doc_meta = validate_and_save_pdf(archivo, pub.id)
         except ValueError as err:
@@ -555,8 +610,6 @@ class DocumentoDigitalListCreateView(views.APIView):
             tipo = TipoDocumento.objects.first()
 
         titulo = request.data.get('titulo') or doc_meta['nombre_original']
-        nivel_acceso = request.data.get('nivel_acceso', 'restringido')
-
         doc = DocumentoDigital.objects.create(
             publicacion=pub,
             tipo=tipo,
@@ -594,6 +647,8 @@ class DocumentoDigitalDetailView(views.APIView):
         doc = self.get_object(doc_id)
         if not doc:
             return Response({'detail': 'Documento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        if not publication_is_visible_to(request.user, doc.publicacion):
+            return Response({'detail': 'No tiene autorización para consultar este documento.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(DocumentoDigitalSerializer(doc).data)
 
     @transaction.atomic
@@ -760,8 +815,14 @@ class RevisionPublicacionActionView(views.APIView):
         except Publicacion.DoesNotExist:
             return Response({'detail': 'Publicación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
 
+        if pub.estado not in ('pendiente', 'en_revision', 'observada'):
+            return Response(
+                {'error': 'Esta publicación ya tiene un dictamen final y no está disponible para revisión.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
         resultado = request.data.get('resultado', '').strip().lower()
-        if resultado not in ('aprobada', 'rechazada', 'observada', 'pendiente'):
+        if resultado not in ('aprobada', 'rechazada', 'observada'):
             return Response(
                 {'error': 'El resultado de la revisión debe ser "aprobada", "rechazada" u "observada".'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -826,21 +887,14 @@ class RepositorioListView(views.APIView):
     def get(self, request):
         ensure_catalogs_seeded()
         user = request.user
-        has_review_privileges = bool(
-            user and user.is_authenticated and (
-                user.is_superuser
-                or user.has_role('superadmin')
-                or user.has_role('admin_academico')
-                or user.has_role('comite_academico')
-            )
-        )
+        can_review = user_has_review_privileges(user)
 
         qs = Publicacion.objects.select_related('tipo', 'registrada_por').prefetch_related(
             'autores_relacion__autor', 'categorias__area', 'palabras_clave', 'documentos'
         )
 
         solicitud_estado = request.query_params.get('estado')
-        if has_review_privileges and solicitud_estado:
+        if can_review and solicitud_estado:
             qs = qs.filter(estado=solicitud_estado)
         else:
             # Los usuarios generales solo ven publicaciones aprobadas
@@ -895,8 +949,25 @@ class RepositorioListView(views.APIView):
         # Ordenar por fecha más reciente
         qs = qs.order_by('-fecha_publicacion', '-fecha_registro', '-id')
 
-        serializer = PublicacionListSerializer(qs, many=True)
+        serializer = PublicacionPublicaListSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
+
+
+class RepositorioAccessStatusView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        has_active_membership = Miembro.objects.filter(
+            usuario_id=request.user.id,
+            estado='activo',
+        ).exists()
+        has_active_investigator_profile = Investigador.objects.filter(
+            perfil_academico__usuario_id=request.user.id,
+            estado='activo',
+        ).exists()
+        return Response({
+            'documentos_miembros': has_active_membership or has_active_investigator_profile,
+        })
 
 
 class RepositorioDetailView(views.APIView):
@@ -915,18 +986,11 @@ class RepositorioDetailView(views.APIView):
             return Response({'detail': 'Publicación no encontrada en el repositorio.'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
-        has_review_privileges = bool(
-            user and user.is_authenticated and (
-                user.is_superuser
-                or user.has_role('superadmin')
-                or user.has_role('admin_academico')
-                or user.has_role('comite_academico')
-            )
-        )
-        is_owner = bool(user and user.is_authenticated and pub.registrada_por_id == user.id)
+        can_review = user_has_review_privileges(user)
+        is_owner = publication_is_owned_by(user, pub)
 
         # Si no está aprobada, solo el propietario o revisor puede verla
-        if pub.estado != 'aprobada' and not (has_review_privileges or is_owner):
+        if pub.estado != 'aprobada' and not (can_review or is_owner):
             return Response(
                 {'detail': 'La publicación solicitada se encuentra en proceso editorial y aún no está disponible públicamente.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -941,7 +1005,12 @@ class RepositorioDetailView(views.APIView):
         except Exception:
             pass
 
-        serializer = PublicacionDetailSerializer(pub)
+        if can_review:
+            serializer = PublicacionDetailSerializer(pub, context={'request': request})
+        elif pub.estado == 'aprobada':
+            serializer = PublicacionPublicaDetailSerializer(pub, context={'request': request})
+        else:
+            serializer = PublicacionPropietarioDetailSerializer(pub, context={'request': request})
         return Response(serializer.data)
 
 
@@ -966,22 +1035,8 @@ class DocumentoDigitalDownloadView(views.APIView):
         pub = doc.publicacion
         user = request.user
 
-        has_review_privileges = bool(
-            user and user.is_authenticated and (
-                user.is_superuser
-                or user.has_role('superadmin')
-                or user.has_role('admin_academico')
-                or user.has_role('comite_academico')
-            )
-        )
-        is_author = bool(user and user.is_authenticated and pub.registrada_por_id == user.id)
-        is_member = bool(
-            user and user.is_authenticated and (
-                has_review_privileges
-                or user.has_role('investigador')
-                or user.has_role('miembro')
-            )
-        )
+        has_review_privileges = user_has_review_privileges(user)
+        is_author = publication_is_owned_by(user, pub)
 
         # Regla 1: Si la publicación no está aprobada, solo autor o revisor pueden acceder al documento
         if pub.estado != 'aprobada' and not (is_author or has_review_privileges):
@@ -992,6 +1047,11 @@ class DocumentoDigitalDownloadView(views.APIView):
 
         # Regla 2: Niveles de acceso del documento
         nivel = doc.nivel_acceso.lower()
+        if nivel not in dict(DocumentoDigital.NIVELES_ACCESO):
+            return Response(
+                {'detail': 'El documento tiene un nivel de acceso no válido y no puede descargarse.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if nivel == 'restringido':
             if not (is_author or has_review_privileges):
                 return Response(
@@ -999,6 +1059,18 @@ class DocumentoDigitalDownloadView(views.APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
         elif nivel == 'miembros':
+            is_member = bool(
+                has_review_privileges
+                or (
+                    user and user.is_authenticated and (
+                        Miembro.objects.filter(usuario_id=user.id, estado='activo').exists()
+                        or Investigador.objects.filter(
+                            perfil_academico__usuario_id=user.id,
+                            estado='activo',
+                        ).exists()
+                    )
+                )
+            )
             if not is_member and not is_author:
                 return Response(
                     {'detail': 'Este documento es exclusivo para miembros e investigadores acreditados de ABOCCRIM. Inicie sesión.'},

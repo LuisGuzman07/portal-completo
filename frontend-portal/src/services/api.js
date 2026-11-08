@@ -2,6 +2,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/
 
 export async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
+  const { skipAuth = false, ...fetchOptions } = options;
   const token = localStorage.getItem('aboccrim_token');
 
   const headers = {
@@ -12,16 +13,16 @@ export async function apiRequest(endpoint, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (token) {
+  if (token && !skipAuth) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     headers
   });
 
-  if (response.status === 401 && token) {
+  if (response.status === 401 && token && !skipAuth) {
     // Token expired or invalid
     localStorage.removeItem('aboccrim_token');
     localStorage.removeItem('aboccrim_refresh');
@@ -294,7 +295,144 @@ export const publicationService = {
   }),
 };
 
+export const eventService = {
+  publicList: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/events/public/${query ? `?${query}` : ''}`);
+  },
+  list: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/events/${query ? `?${query}` : ''}`);
+  },
+  create: (data) => apiRequest('/events/', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => apiRequest(`/events/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+};
+
+export const newsService = {
+  publicList: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/news/public/${query ? `?${query}` : ''}`);
+  },
+  list: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/news/${query ? `?${query}` : ''}`);
+  },
+  create: (data) => apiRequest('/news/', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => apiRequest(`/news/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+};
+
+export const multimediaService = {
+  publicList: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/multimedia/public/${query ? `?${query}` : ''}`);
+  },
+  list: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/multimedia/${query ? `?${query}` : ''}`);
+  },
+  create: (data) => apiRequest('/multimedia/', {
+    method: 'POST', body: data instanceof FormData ? data : JSON.stringify(data)
+  }),
+  update: (id, data) => apiRequest(`/multimedia/${id}/`, {
+    method: 'PATCH', body: data instanceof FormData ? data : JSON.stringify(data)
+  }),
+  download: async (id, filename = 'recurso-multimedia') => {
+    const token = localStorage.getItem('aboccrim_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await fetch(`${API_BASE_URL}/multimedia/${id}/download/`, { headers });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'No se pudo descargar el recurso.');
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  },
+};
+
+export const agreementService = {
+  publicList: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/convenios/public/${query ? `?${query}` : ''}`);
+  },
+  list: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/convenios/${query ? `?${query}` : ''}`);
+  },
+  get: (id) => apiRequest(`/convenios/${id}/`),
+  create: (data) => apiRequest('/convenios/', { method: 'POST', body: data instanceof FormData ? data : JSON.stringify(data) }),
+  update: (id, data) => apiRequest(`/convenios/${id}/`, { method: 'PATCH', body: data instanceof FormData ? data : JSON.stringify(data) }),
+  institutions: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/instituciones/${query ? `?${query}` : ''}`);
+  },
+  createInstitution: (data) => apiRequest('/instituciones/', { method: 'POST', body: JSON.stringify(data) }),
+  updateInstitution: (id, data) => apiRequest(`/instituciones/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+  downloadDocument: async (id, filename = 'convenio.pdf') => {
+    const token = localStorage.getItem('aboccrim_token');
+    const response = await fetch(`${API_BASE_URL}/convenios/${id}/documento/`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'No se pudo descargar el documento del convenio.');
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  },
+};
+
+export const incorporationService = {
+  submit: (data) => apiRequest('/incorporacion/solicitudes/', {
+    method: 'POST', body: data, skipAuth: true,
+  }),
+  tracking: (token) => apiRequest('/incorporacion/solicitudes/seguimiento/', {
+    method: 'POST', body: JSON.stringify({ token }), skipAuth: true,
+  }),
+  submitSupportingDocuments: (data) => apiRequest('/incorporacion/solicitudes/seguimiento/documentos/', {
+    method: 'POST', body: data, skipAuth: true,
+  }),
+  reviewList: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/incorporacion/solicitudes/revision/${query ? `?${query}` : ''}`);
+  },
+  reviewDetail: (id) => apiRequest(`/incorporacion/solicitudes/${id}/revision/`),
+  evaluate: (id, data) => apiRequest(`/incorporacion/solicitudes/${id}/evaluaciones/`, {
+    method: 'POST', body: JSON.stringify(data),
+  }),
+  downloadSupportingDocument: async (applicationId, documentId, filename = 'documento.pdf') => {
+    const token = localStorage.getItem('aboccrim_token');
+    const response = await fetch(`${API_BASE_URL}/incorporacion/solicitudes/${applicationId}/documentos/${documentId}/download/`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'No se pudo descargar el documento de la solicitud.');
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  },
+};
+
 export const repositoryService = {
+  accessStatus: () => apiRequest('/repository/access-status/'),
   list: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return apiRequest(`/repository/${query ? `?${query}` : ''}`);

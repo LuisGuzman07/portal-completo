@@ -22,6 +22,16 @@ import AdminInvestigadoresPage from './pages/academic/AdminInvestigadoresPage';
 import AdminMiembrosPage from './pages/academic/AdminMiembrosPage';
 import AdminPublicacionesPage from './pages/publications/AdminPublicacionesPage';
 import RevisionPublicacionesPage from './pages/publications/RevisionPublicacionesPage';
+import AdminEventosPage from './pages/institutional/AdminEventosPage';
+import EventosPage from './pages/public/EventosPage';
+import AdminNoticiasPage from './pages/institutional/AdminNoticiasPage';
+import NoticiasPage from './pages/public/NoticiasPage';
+import AdminMultimediaPage from './pages/institutional/AdminMultimediaPage';
+import MultimediaPage from './pages/public/MultimediaPage';
+import AdminConveniosPage from './pages/institutional/AdminConveniosPage';
+import ConveniosPage from './pages/public/ConveniosPage';
+import SolicitudIncorporacionPage from './pages/public/SolicitudIncorporacionPage';
+import EvaluarSolicitudesPage from './pages/academic/EvaluarSolicitudesPage';
 
 function PublicLayout() {
   return (
@@ -44,6 +54,11 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/investigadores" element={<InvestigadoresPage />} />
           <Route path="/repositorio" element={<RepositorioAcademicoPage />} />
+          <Route path="/eventos" element={<EventosPage />} />
+          <Route path="/noticias" element={<NoticiasPage />} />
+          <Route path="/multimedia" element={<MultimediaPage />} />
+          <Route path="/convenios" element={<ConveniosPage />} />
+          <Route path="/solicitud-incorporacion" element={<SolicitudIncorporacionPage />} />
           <Route path="/acceso-miembros" element={<AccesoMiembrosPage />} />
         </Route>
 
@@ -60,6 +75,11 @@ export default function App() {
           <Route path="perfil-academico" element={<AcademicProfilePage />} />
           <Route path="publicaciones" element={<AdminPublicacionesPage />} />
           <Route path="revisiones" element={<RevisionPublicacionesPage />} />
+          <Route path="eventos" element={<AdminEventosPage />} />
+          <Route path="noticias" element={<AdminNoticiasPage />} />
+          <Route path="multimedia" element={<AdminMultimediaPage />} />
+          <Route path="convenios" element={<AdminConveniosPage />} />
+          <Route path="solicitudes-incorporacion" element={<EvaluarSolicitudesPage />} />
           <Route path="investigadores" element={<AdminInvestigadoresPage />} />
           <Route path="miembros" element={<AdminMiembrosPage />} />
           <Route path="usuarios" element={<AdminUsuariosPage />} />

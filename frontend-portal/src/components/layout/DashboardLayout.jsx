@@ -15,7 +15,7 @@ export default function DashboardLayout() {
 
   const navItemClass = (path) => {
     const isActive = location.pathname === path;
-    return `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+    return `flex min-w-0 items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
       isActive
         ? 'bg-primary text-on-primary shadow-xs'
         : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'
@@ -23,7 +23,7 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden font-sans">
+    <div className="flex h-screen supports-[height:100dvh]:h-[100dvh] min-h-0 bg-background overflow-hidden font-sans">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -115,6 +115,13 @@ export default function DashboardLayout() {
               </Link>
             )}
 
+            {(isSuperAdmin || user?.roles_codigos?.includes('comite_academico')) && (
+              <Link to="/dashboard/solicitudes-incorporacion" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/solicitudes-incorporacion')}>
+                <span className="material-symbols-outlined text-xl">fact_check</span>
+                <span>Evaluar Incorporaciones</span>
+              </Link>
+            )}
+
             {(isSuperAdmin || isAdminAcademico) && (
               <Link to="/dashboard/investigadores" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/investigadores')}>
                 <span className="material-symbols-outlined text-xl">manage_search</span>
@@ -126,6 +133,34 @@ export default function DashboardLayout() {
               <Link to="/dashboard/miembros" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/miembros')}>
                 <span className="material-symbols-outlined text-xl">groups</span>
                 <span>Miembros ABOCCRIM</span>
+              </Link>
+            )}
+
+            {(isSuperAdmin || isAdminAcademico) && (
+              <Link to="/dashboard/eventos" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/eventos')}>
+                <span className="material-symbols-outlined text-xl">event</span>
+                <span>Eventos Académicos</span>
+              </Link>
+            )}
+
+            {(isSuperAdmin || isAdminAcademico) && (
+              <Link to="/dashboard/noticias" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/noticias')}>
+                <span className="material-symbols-outlined text-xl">feed</span>
+                <span>Noticias Institucionales</span>
+              </Link>
+            )}
+
+            {(isSuperAdmin || isAdminAcademico) && (
+              <Link to="/dashboard/multimedia" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/multimedia')}>
+                <span className="material-symbols-outlined text-xl">perm_media</span>
+                <span>Contenido Multimedia</span>
+              </Link>
+            )}
+
+            {(isSuperAdmin || isAdminAcademico) && (
+              <Link to="/dashboard/convenios" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/convenios')}>
+                <span className="material-symbols-outlined text-xl">handshake</span>
+                <span>Convenios Institucionales</span>
               </Link>
             )}
 
@@ -184,24 +219,26 @@ export default function DashboardLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <header className="h-20 bg-surface-container-lowest border-b border-outline-variant/30 px-6 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-4">
+        <header className="h-16 sm:h-20 bg-surface-container-lowest border-b border-outline-variant/30 px-3 sm:px-6 flex items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menú de navegación"
+              aria-expanded={sidebarOpen}
               className="lg:hidden p-2 rounded-lg text-primary hover:bg-surface-container-high"
             >
               <span className="material-symbols-outlined text-2xl">menu</span>
             </button>
-            <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-              <span className="text-outline">ABOCCRIM</span>
-              <span>/</span>
-              <span className="font-bold text-primary capitalize">
+            <div className="flex min-w-0 items-center gap-1.5 text-[11px] sm:text-xs text-on-surface-variant">
+              <span className="hidden sm:inline text-outline">ABOCCRIM</span>
+              <span className="hidden sm:inline">/</span>
+              <span className="min-w-0 truncate font-bold text-primary capitalize">
                 {location.pathname.replace('/dashboard', 'Consola') || 'Inicio'}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
             <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container text-xs font-semibold text-primary">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Sesión Segura RBAC</span>
@@ -218,8 +255,8 @@ export default function DashboardLayout() {
         </header>
 
         {/* Dynamic page container */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-background">
-          <div className="max-w-7xl mx-auto">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-background">
+          <div className="mx-auto w-full max-w-7xl min-w-0">
             <Outlet />
           </div>
         </main>

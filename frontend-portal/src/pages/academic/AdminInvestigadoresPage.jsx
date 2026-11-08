@@ -223,7 +223,7 @@ export default function AdminInvestigadoresPage() {
           </div>
           {areas.length === 0 && <button onClick={() => { setEditingArea(null); setAreaForm({ nombre: '', descripcion: '' }); setAreaModalOpen(true); }} className="shrink-0 rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-bold text-sky-950 hover:bg-sky-100">Crear primera área</button>}
         </div>
-        <ol className="grid gap-2 text-xs sm:grid-cols-4">
+        <ol className="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
           <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-primary">1 · Pendiente</span><span className="mt-1 block text-on-surface-variant">Revisar grado, institución, especialidad, biografía y ORCID.</span></li>
           <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-orange-800">2 · Observado</span><span className="mt-1 block text-on-surface-variant">Pedir correcciones concretas; la persona puede actualizar y reenviar.</span></li>
           <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-emerald-800">3 · Aprobar</span><span className="mt-1 block text-on-surface-variant">Asignar al menos un área y decidir si se publica en el directorio.</span></li>
@@ -305,8 +305,8 @@ export default function AdminInvestigadoresPage() {
       <p className="text-xs text-outline">Áreas temáticas registradas: {areas.length}. La desactivación conserva el registro y lo oculta del directorio.</p>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-on-surface/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setModalOpen(false); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="investigator-modal-title" className="my-auto max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-surface-container-lowest p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setModalOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="investigator-modal-title" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <h2 id="investigator-modal-title" className="text-xl font-bold text-primary">{editing ? 'Revisar investigador' : 'Vincular perfil existente'}</h2>
@@ -387,8 +387,8 @@ export default function AdminInvestigadoresPage() {
       )}
 
       {areaModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-on-surface/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setAreaModalOpen(false); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="area-catalog-title" className="my-auto w-full max-w-4xl rounded-2xl bg-surface-container-lowest p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setAreaModalOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="area-catalog-title" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-2xl bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div><h2 id="area-catalog-title" className="text-xl font-bold text-primary">Catálogo de áreas temáticas</h2><p className="mt-1 text-sm text-on-surface-variant">Las áreas se asignan a los investigadores durante la revisión y ayudan a organizar el directorio.</p></div>
               <button type="button" onClick={() => setAreaModalOpen(false)} aria-label="Cerrar" className="rounded-lg p-1 text-outline hover:bg-surface-container"><span className="material-symbols-outlined">close</span></button>

@@ -19,4 +19,9 @@ urlpatterns = [
     path('api/v1/', include('apps.audit.urls')),
     path('api/v1/', include('apps.academics.urls')),
     path('api/v1/', include('apps.publications.urls')),
+    path('api/v1/', include('apps.events.urls')),
+    path('api/v1/', include('apps.news.urls')),
+    path('api/v1/', include('apps.multimedia.urls')),
+    path('api/v1/', include('apps.agreements.urls')),
+    path('api/v1/', include('apps.incorporation.urls')),
 ]

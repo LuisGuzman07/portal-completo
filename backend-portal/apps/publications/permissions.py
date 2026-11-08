@@ -34,6 +34,20 @@ class CanManageDocument(BasePermission):
         return pub.registrada_por_id == user.id
 
 
+class CanManagePublicationCatalog(BasePermission):
+    message = 'Solo administración académica puede modificar los catálogos de publicaciones.'
+
+    def has_permission(self, request, view):
+        user = request.user
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return True
+        return bool(
+            user
+            and user.is_authenticated
+            and (user.is_superuser or user.has_role('superadmin') or user.has_role('admin_academico'))
+        )
+
+
 class CanReviewPublication(BasePermission):
     message = 'Se requieren privilegios de comité académico o administración para evaluar publicaciones.'
 
