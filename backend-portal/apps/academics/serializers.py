@@ -139,11 +139,20 @@ class InvestigadorPublicoSerializer(serializers.ModelSerializer):
 
 class InvestigadorPublicoDetalleSerializer(InvestigadorPublicoSerializer):
     biografia = serializers.CharField(source='perfil_academico.biografia', read_only=True, allow_null=True)
-    orcid = serializers.CharField(source='perfil_academico.orcid', read_only=True, allow_null=True)
     fecha_alta = serializers.DateField(read_only=True, allow_null=True)
+    categoria_miembro = serializers.SerializerMethodField()
 
     class Meta(InvestigadorPublicoSerializer.Meta):
-        fields = InvestigadorPublicoSerializer.Meta.fields + ['biografia', 'orcid', 'fecha_alta']
+        fields = InvestigadorPublicoSerializer.Meta.fields + ['biografia', 'fecha_alta', 'categoria_miembro']
+
+    def get_categoria_miembro(self, obj):
+        try:
+            membresia = getattr(obj.perfil_academico.usuario, 'membresia', None)
+            if membresia and membresia.categoria:
+                return membresia.categoria.nombre
+        except Exception:
+            pass
+        return None
 
 
 class InvestigadorListSerializer(serializers.ModelSerializer):

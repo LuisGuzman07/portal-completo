@@ -171,7 +171,7 @@ export default function SolicitudIncorporacionPage() {
     <section className="w-full flex-1 bg-gradient-to-b from-surface-container-low to-background px-margin-mobile py-space-xl md:px-margin-desktop">
       <div className="mx-auto max-w-4xl space-y-8">
         <header className="max-w-3xl">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Incorporación institucional · CU22</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Incorporación institucional</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-primary md:text-4xl">Solicitud de incorporación</h1>
           <p className="mt-3 text-sm leading-6 text-on-surface-variant md:text-base">Envía tus antecedentes y documentos. Podrás consultar el avance y responder a requerimientos del Comité Académico desde esta misma página.</p>
         </header>

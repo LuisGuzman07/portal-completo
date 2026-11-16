@@ -59,6 +59,18 @@ export const authService = {
       body: JSON.stringify(payload)
     }),
 
+  confirmEmail: (token) =>
+    apiRequest('/auth/confirm-email/', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    }),
+
+  resendConfirmation: (email) =>
+    apiRequest('/auth/resend-confirmation/', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    }),
+
   logout: (refresh) =>
     apiRequest('/auth/logout/', {
       method: 'POST',
@@ -219,7 +231,7 @@ export const publicationService = {
     });
   },
 
-  // Clasificación (CU15)
+  // Clasificación y Catálogos Académicos
   listTypes: () => apiRequest('/publications/types/'),
   listDocTypes: () => apiRequest('/publications/document-types/'),
   listCategories: (params = {}) => {
@@ -233,7 +245,7 @@ export const publicationService = {
   },
   listAvailableInvestigators: () => apiRequest('/publications/investigators/'),
 
-  // Documentos Digitales (CU14 y CU13)
+  // Documentos Digitales y Descarga
   listDocuments: (pubId) => apiRequest(`/publications/${pubId}/documents/`),
   uploadDocument: (pubId, formData) => apiRequest(`/publications/${pubId}/documents/`, {
     method: 'POST',
@@ -284,7 +296,7 @@ export const publicationService = {
     window.open(fileUrl, '_blank');
   },
 
-  // Revisión Académica (CU11)
+  // Revisión Académica
   listReviewQueue: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return apiRequest(`/publications/review-queue/${query ? `?${query}` : ''}`);

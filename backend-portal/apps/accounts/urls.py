@@ -5,6 +5,8 @@ from .views import (
     LoginView,
     LogoutView,
     CurrentUserView,
+    ConfirmEmailView,
+    ResendConfirmationEmailView,
     UsuarioListCreateView,
     UsuarioDetailView,
     AssignRolesView
@@ -13,6 +15,8 @@ from .views import (
 urlpatterns = [
     # Auth endpoints
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
+    path('auth/confirm-email/', ConfirmEmailView.as_view(), name='auth-confirm-email'),
+    path('auth/resend-confirmation/', ResendConfirmationEmailView.as_view(), name='auth-resend-confirmation'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),

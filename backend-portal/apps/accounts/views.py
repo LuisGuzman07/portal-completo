@@ -18,6 +18,11 @@ from .serializers import (
 from apps.roles.models import Rol, UsuarioRol
 from apps.roles.permissions import CanManageUsers, IsSuperAdmin
 from apps.audit.models import registrar_auditoria
+from apps.common.email_service import (
+    generate_email_confirmation_token,
+    verify_email_confirmation_token,
+    send_confirmation_email,
+)
 
 class RegisterView(views.APIView):
     permission_classes = [AllowAny]
@@ -34,7 +39,8 @@ class RegisterView(views.APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.save()
-        refresh = RefreshToken.for_user(user)
+        token = generate_email_confirmation_token(user)
+        correo_enviado = send_confirmation_email(user, token)
 
         registrar_auditoria(
             request=request,
@@ -42,16 +48,17 @@ class RegisterView(views.APIView):
             accion='REGISTRO_CUENTA',
             entidad='Usuario',
             registro_afectado_id=user.id,
-            detalle=f"Registro público de cuenta: {user.email}"
+            detalle=f"Registro de cuenta: {user.email} (pendiente confirmación, enviado={correo_enviado})"
         )
 
         return Response({
-            'message': 'Cuenta registrada exitosamente.',
-            'user': UserProfileSerializer(user).data,
-            'tokens': {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-            }
+            'message': (
+                'Cuenta registrada exitosamente. Hemos enviado un correo con el enlace de confirmación a tu dirección. '
+                'Por favor, revisa tu bandeja de entrada (y la carpeta de spam o correo no deseado) para activar tu cuenta antes de iniciar sesión.'
+            ),
+            'email': user.email,
+            'requiere_confirmacion': True,
+            'correo_enviado': correo_enviado,
         }, status=status.HTTP_201_CREATED)
 
 
@@ -272,3 +279,112 @@ class AssignRolesView(views.APIView):
             'message': f"Roles actualizados para {target_user.get_full_name()}",
             'user': UserProfileSerializer(target_user).data
         })
+
+
+class ConfirmEmailView(views.APIView):
+    """
+    Confirma y activa la cuenta de usuario mediante el token firmado enviado por correo.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token', '').strip()
+        if not token:
+            return Response(
+                {'error': 'Debe proporcionar un token de confirmación válido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user, error_code = verify_email_confirmation_token(token)
+
+        if error_code == 'expired':
+            return Response(
+                {
+                    'error': 'El enlace de confirmación ha expirado (validez de 24 horas). Por favor solicita un nuevo enlace de activación.',
+                    'codigo_error': 'expired'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        elif error_code in ('invalid', 'not_found') or not user:
+            return Response(
+                {
+                    'error': 'El enlace de confirmación no es válido o está corrupto.',
+                    'codigo_error': 'invalid'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if user.activo:
+            return Response({
+                'message': 'Esta cuenta ya se encuentra confirmada y activa. Puede iniciar sesión directamente.',
+                'ya_activa': True,
+                'email': user.email
+            }, status=status.HTTP_200_OK)
+
+        user.activo = True
+        user.save(update_fields=['activo'])
+
+        registrar_auditoria(
+            request=request,
+            usuario=user,
+            accion='CONFIRMAR_CORREO_CUENTA',
+            entidad='Usuario',
+            registro_afectado_id=user.id,
+            detalle=f"Cuenta confirmada y activada mediante enlace de correo: {user.email}"
+        )
+
+        return Response({
+            'message': '¡Tu cuenta ha sido confirmada exitosamente! Ya puedes iniciar sesión con tus credenciales.',
+            'email': user.email
+        }, status=status.HTTP_200_OK)
+
+
+class ResendConfirmationEmailView(views.APIView):
+    """
+    Permite solicitar el reenvío del correo de activación para cuentas aún no confirmadas.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        if not email:
+            return Response(
+                {'error': 'Debe proporcionar una dirección de correo electrónico.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = Usuario.objects.get(email__iexact=email)
+        except Usuario.DoesNotExist:
+            # Respuesta uniforme por seguridad para no revelar existencia de correos
+            return Response({
+                'message': 'Si la dirección ingresada corresponde a una cuenta pendiente de activación, se ha enviado un nuevo enlace.'
+            }, status=status.HTTP_200_OK)
+
+        if user.activo:
+            return Response({
+                'message': 'Esta cuenta ya está activa y confirmada. Puede iniciar sesión directamente.',
+                'ya_activa': True
+            }, status=status.HTTP_200_OK)
+
+        token = generate_email_confirmation_token(user)
+        enviado = send_confirmation_email(user, token)
+
+        registrar_auditoria(
+            request=request,
+            usuario=user,
+            accion='REENVIAR_CONFIRMACION_EMAIL',
+            entidad='Usuario',
+            registro_afectado_id=user.id,
+            detalle=f"Reenvío de enlace de confirmación para: {user.email} (enviado={enviado})"
+        )
+
+        if not enviado:
+            return Response({
+                'error': 'No fue posible despachar el correo de activación en este momento. Por favor intenta más tarde.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            'message': f'Se ha enviado un nuevo enlace de confirmación a {user.email}. Por favor revise su bandeja de entrada.',
+            'correo_enviado': True
+        }, status=status.HTTP_200_OK)

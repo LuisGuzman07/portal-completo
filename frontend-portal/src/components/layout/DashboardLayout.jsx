@@ -49,7 +49,7 @@ export default function DashboardLayout() {
               />
               <div className="flex flex-col">
                 <span className="text-base font-bold text-primary tracking-tight leading-none">ABOCCRIM</span>
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider mt-1">Consola Privada</span>
+                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider mt-1">Panel de Control</span>
               </div>
             </Link>
             <button
@@ -239,10 +239,10 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container text-xs font-semibold text-primary">
+            {/* <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container text-xs font-semibold text-primary">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Sesión Segura RBAC</span>
-            </div>
+            </div> */}
 
             <Link
               to="/"

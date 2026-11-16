@@ -8,9 +8,13 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 
 // Public Pages
 import HomePage from './pages/public/HomePage';
+import InstitucionalPage from './pages/public/InstitucionalPage';
 import InvestigadoresPage from './pages/public/InvestigadoresPage';
+import InvestigadorDetailPage from './pages/public/InvestigadorDetailPage';
 import RepositorioAcademicoPage from './pages/public/RepositorioAcademicoPage';
+import PublicacionDetailPage from './pages/public/PublicacionDetailPage';
 import AccesoMiembrosPage from './pages/auth/AccesoMiembrosPage';
+import ConfirmarCuentaPage from './pages/auth/ConfirmarCuentaPage';
 
 // Admin Pages
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -52,14 +56,18 @@ export default function App() {
         {/* Public Routes with Header & Footer */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/institucional" element={<InstitucionalPage />} />
           <Route path="/investigadores" element={<InvestigadoresPage />} />
+          <Route path="/investigadores/:id" element={<InvestigadorDetailPage />} />
           <Route path="/repositorio" element={<RepositorioAcademicoPage />} />
+          <Route path="/repositorio/:id" element={<PublicacionDetailPage />} />
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/noticias" element={<NoticiasPage />} />
           <Route path="/multimedia" element={<MultimediaPage />} />
           <Route path="/convenios" element={<ConveniosPage />} />
           <Route path="/solicitud-incorporacion" element={<SolicitudIncorporacionPage />} />
           <Route path="/acceso-miembros" element={<AccesoMiembrosPage />} />
+          <Route path="/confirmar-cuenta" element={<ConfirmarCuentaPage />} />
         </Route>
 
         {/* Protected Dashboard Routes */}

@@ -7,14 +7,12 @@ const EMPTY_PROFILE = {
   institucion: '',
   especialidad: '',
   biografia: '',
-  orcid: '',
 };
 
 const FIELDS = [
   { name: 'grado_academico', label: 'Grado académico', placeholder: 'Ej. Maestría en Criminología' },
   { name: 'institucion', label: 'Institución', placeholder: 'Universidad u organización' },
   { name: 'especialidad', label: 'Especialidad', placeholder: 'Área de especialización' },
-  { name: 'orcid', label: 'ORCID (opcional)', placeholder: '0000-0000-0000-0000' },
 ];
 
 export default function AcademicProfilePage() {
@@ -85,12 +83,7 @@ export default function AcademicProfilePage() {
       setUpdatedAt(fecha_actualizacion);
       setNotice('Tu perfil académico se guardó correctamente.');
     } catch (requestError) {
-      const details = requestError.data;
-      if (details && typeof details === 'object' && details.orcid) {
-        setError(Array.isArray(details.orcid) ? details.orcid.join(' ') : String(details.orcid));
-      } else {
-        setError(requestError.message || 'No se pudo guardar el perfil.');
-      }
+      setError(requestError.message || 'No se pudo guardar el perfil.');
     } finally {
       setSaving(false);
     }
@@ -129,7 +122,7 @@ export default function AcademicProfilePage() {
   return (
     <section className="max-w-4xl space-y-6">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-secondary">CU06 · Perfil académico</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-secondary">Perfil académico</p>
         <h1 className="mt-2 text-2xl font-bold text-primary">Mi perfil académico</h1>
         <p className="mt-2 text-sm text-on-surface-variant">
           Completa la información académica que quieres mantener asociada a tu cuenta.
@@ -159,12 +152,11 @@ export default function AcademicProfilePage() {
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900"><span className="material-symbols-outlined text-base">lock</span>Edición bloqueada durante la revisión</span>
               )}
             </div>
-            <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+            <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-3">
               <div><dt className="text-xs font-bold uppercase tracking-wide text-outline">Grado académico</dt><dd className="mt-1 text-sm font-medium text-on-surface">{profile.grado_academico || 'No registrado'}</dd></div>
               <div><dt className="text-xs font-bold uppercase tracking-wide text-outline">Institución</dt><dd className="mt-1 text-sm font-medium text-on-surface">{profile.institucion || 'No registrada'}</dd></div>
               <div><dt className="text-xs font-bold uppercase tracking-wide text-outline">Especialidad</dt><dd className="mt-1 text-sm font-medium text-on-surface">{profile.especialidad || 'No registrada'}</dd></div>
-              <div><dt className="text-xs font-bold uppercase tracking-wide text-outline">ORCID</dt><dd className="mt-1 text-sm font-medium text-on-surface">{profile.orcid || 'No proporcionado'}</dd></div>
-              <div className="sm:col-span-2"><dt className="text-xs font-bold uppercase tracking-wide text-outline">Biografía académica</dt><dd className="mt-2 min-h-16 whitespace-pre-wrap rounded-lg bg-surface-container-low px-4 py-3 text-sm leading-6 text-on-surface">{profile.biografia || 'No registrada'}</dd></div>
+              <div className="sm:col-span-3"><dt className="text-xs font-bold uppercase tracking-wide text-outline">Biografía académica</dt><dd className="mt-2 min-h-16 whitespace-pre-wrap rounded-lg bg-surface-container-low px-4 py-3 text-sm leading-6 text-on-surface">{profile.biografia || 'No registrada'}</dd></div>
             </dl>
           </section>
         )}
@@ -224,7 +216,7 @@ export default function AcademicProfilePage() {
         </div>
 
         {(!hasProfile || editingProfile) && <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             {FIELDS.map(({ name, label, placeholder }) => (
               <label key={name} className="block space-y-1.5">
                 <span className="text-sm font-semibold text-on-surface">{label}</span>
@@ -233,11 +225,9 @@ export default function AcademicProfilePage() {
                   value={profile[name] || ''}
                   onChange={handleChange}
                   placeholder={placeholder}
-                  maxLength={name === 'grado_academico' ? 100 : name === 'institucion' ? 200 : name === 'especialidad' ? 200 : 30}
-                  autoCapitalize={name === 'orcid' ? 'characters' : undefined}
+                  maxLength={name === 'grado_academico' ? 100 : 200}
                   className="w-full rounded-lg border border-outline-variant/50 bg-background px-3.5 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
-                {name === 'orcid' && <span className="block text-xs text-outline">Ingresa 16 dígitos juntos o con guiones. También puedes pegar tu enlace ORCID.</span>}
               </label>
             ))}
           </div>

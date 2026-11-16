@@ -71,7 +71,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=password,
             nombres=validated_data['nombres'],
             apellidos=validated_data['apellidos'],
-            activo=True
+            activo=False
         )
         # Asignar rol mínimo de 'usuario' (Usuario registrado sin acreditación)
         rol_usuario, _ = Rol.objects.get_or_create(
@@ -102,7 +102,7 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Credenciales inválidas. Por favor verifique su correo y contraseña.")
 
         if not user.activo:
-            raise serializers.ValidationError("Su cuenta se encuentra desactivada. Comuníquese con la administración de ABOCCRIM.")
+            raise serializers.ValidationError("Su cuenta aún no ha sido confirmada o se encuentra inactiva. Por favor revise el correo de activación o solicite un nuevo enlace de confirmación.")
 
         attrs['user'] = user
         return attrs

@@ -98,7 +98,7 @@ export default function AdminRolesPage() {
       <div>
         <h1 className="text-2xl font-bold text-primary tracking-tight">Administración de Roles y Permisos</h1>
         <p className="text-xs text-on-surface-variant mt-1">
-          Control de acceso basado en roles (RBAC). Los permisos efectivos se evalúan estrictamente en el backend.
+          Control de acceso basado en roles.
         </p>
       </div>
 

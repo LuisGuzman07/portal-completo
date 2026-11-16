@@ -70,12 +70,36 @@ class MiembroDetailView(generics.RetrieveUpdateAPIView):
         )
 
 
+OFFICIAL_MEMBER_CATEGORIES = [
+    ('Miembro de Número', 'Académico colegiado con plenos derechos estatutarios, voz y voto en la asamblea general.'),
+    ('Miembro Honorario', 'Distinción especial otorgada por la Academia a personalidades de eminente trayectoria o aportes de alto mérito.'),
+    ('Académico Adherente', 'Profesional que realiza contribuciones voluntarias a beneficio de los fines y programas de la Asociación.'),
+    ('Académico Asociado', 'Investigador vinculado a programas de investigación, formación o publicaciones de la Academia con opción a promover a Miembro de Número.'),
+    ('Académico Correspondiente', 'Investigador o profesional radicado en el exterior que colabora activamente con los objetivos de la Academia.'),
+]
+
+
+def ensure_member_categories_seeded():
+    """Garantiza la existencia de las 5 categorías estatutarias oficiales de ABOCCRIM."""
+    try:
+        for nombre, desc in OFFICIAL_MEMBER_CATEGORIES:
+            cat = CategoriaMiembro.objects.filter(nombre__iexact=nombre).first()
+            if not cat:
+                CategoriaMiembro.objects.create(nombre=nombre, descripcion=desc)
+            elif not cat.descripcion or cat.descripcion.strip() == '':
+                cat.descripcion = desc
+                cat.save(update_fields=['descripcion'])
+    except Exception as e:
+        print(f'Error al sembrar categorías de miembro: {e}')
+
+
 class CategoriasMiembroListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, CanManageMembers]
     serializer_class = CategoriaMiembroSerializer
 
     def get_queryset(self):
-        return CategoriaMiembro.objects.annotate(miembros_count=Count('miembros'))
+        ensure_member_categories_seeded()
+        return CategoriaMiembro.objects.annotate(miembros_count=Count('miembros')).order_by('id')
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -370,28 +394,53 @@ class InvestigadorPublicoDetalleView(views.APIView):
         investigador = Investigador.objects.filter(
             pk=pk, estado='activo', visible_directorio=True
         ).select_related(
-            'perfil_academico', 'perfil_academico__usuario'
+            'perfil_academico',
+            'perfil_academico__usuario',
+            'perfil_academico__usuario__membresia',
+            'perfil_academico__usuario__membresia__categoria'
         ).prefetch_related('areas').first()
         if not investigador:
             return Response({'detail': 'El perfil no está disponible en el directorio.'}, status=status.HTTP_404_NOT_FOUND)
 
         data = InvestigadorPublicoDetalleSerializer(investigador).data
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT DISTINCT p.id, p.titulo, p.resumen, p.anio, p.doi, p.fecha_publicacion
-                FROM publicacion p
-                INNER JOIN publicacion_autor pa ON pa.publicacion_id = p.id
-                INNER JOIN autor a ON a.id = pa.autor_id
-                WHERE a.investigador_id = %s
-                  AND p.estado IN ('publicada', 'publicado', 'aprobada', 'aprobado')
-                  AND p.fecha_publicacion IS NOT NULL
-                ORDER BY p.fecha_publicacion DESC, p.titulo
-                """,
-                [investigador.id],
-            )
-            columns = [column[0] for column in cursor.description]
-            data['publicaciones'] = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        try:
+            from apps.publications.models import Publicacion
+            publicaciones_qs = Publicacion.objects.filter(
+                autores__investigador_id=investigador.id,
+                estado__in=['publicada', 'publicado', 'aprobada', 'aprobado'],
+                fecha_publicacion__isnull=False
+            ).select_related('tipo').prefetch_related('autores').order_by('-fecha_publicacion', 'titulo').distinct()
+
+            pubs_data = []
+            for pub in publicaciones_qs:
+                pubs_data.append({
+                    'id': pub.id,
+                    'titulo': pub.titulo,
+                    'resumen': pub.resumen,
+                    'anio': pub.anio,
+                    'doi': pub.doi,
+                    'fecha_publicacion': pub.fecha_publicacion,
+                    'tipo_nombre': pub.tipo.nombre if pub.tipo else None,
+                    'autores': [{'nombre_completo': a.nombre_completo} for a in pub.autores.all()]
+                })
+            data['publicaciones'] = pubs_data
+        except Exception:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT DISTINCT p.id, p.titulo, p.resumen, p.anio, p.doi, p.fecha_publicacion
+                    FROM publicacion p
+                    INNER JOIN publicacion_autor pa ON pa.publicacion_id = p.id
+                    INNER JOIN autor a ON a.id = pa.autor_id
+                    WHERE a.investigador_id = %s
+                      AND p.estado IN ('publicada', 'publicado', 'aprobada', 'aprobado')
+                      AND p.fecha_publicacion IS NOT NULL
+                    ORDER BY p.fecha_publicacion DESC, p.titulo
+                    """,
+                    [investigador.id],
+                )
+                columns = [column[0] for column in cursor.description]
+                data['publicaciones'] = [dict(zip(columns, row)) for row in cursor.fetchall()]
         return Response(data)
 
 

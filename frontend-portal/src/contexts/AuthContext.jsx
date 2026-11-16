@@ -57,14 +57,16 @@ export function AuthProvider({ children }) {
 
   const register = async (payload) => {
     const data = await authService.register(payload);
-    const accessToken = data.tokens.access;
-    const refreshToken = data.tokens.refresh;
+    if (data.tokens) {
+      const accessToken = data.tokens.access;
+      const refreshToken = data.tokens.refresh;
 
-    localStorage.setItem('aboccrim_token', accessToken);
-    localStorage.setItem('aboccrim_refresh', refreshToken);
-    setToken(accessToken);
-    setUser(data.user);
-    return data.user;
+      localStorage.setItem('aboccrim_token', accessToken);
+      localStorage.setItem('aboccrim_refresh', refreshToken);
+      setToken(accessToken);
+      setUser(data.user);
+    }
+    return data;
   };
 
   const logout = async () => {

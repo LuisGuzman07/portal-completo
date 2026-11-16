@@ -76,7 +76,7 @@ export default function AdminEventosPage() {
   return (
     <section className="space-y-6">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">CU18 · administración institucional</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-primary">Eventos académicos</h1><p className="mt-2 text-sm text-on-surface-variant">Registra actividades, actualiza sus fechas y decide cuándo aparecen en el portal público.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Administración institucional · Eventos</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-primary">Eventos académicos</h1><p className="mt-2 text-sm text-on-surface-variant">Registra actividades, actualiza sus fechas y decide cuándo aparecen en el portal público.</p></div>
         <a href="/eventos" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm font-bold text-primary"><span className="material-symbols-outlined">open_in_new</span> Ver portal público</a>
       </header>
 

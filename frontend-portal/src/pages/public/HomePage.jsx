@@ -37,14 +37,14 @@ export default function HomePage() {
               ) : (
                 <>
                   <Link
-                    to="/acceso-miembros"
+                    to="/acceso-miembros?tab=login"
                     className="px-6 py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-bold text-sm shadow-sm transition-all flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-lg">login</span>
                     <span>Iniciar Sesión</span>
                   </Link>
                   <Link
-                    to="/acceso-miembros"
+                    to="/acceso-miembros?tab=register"
                     className="px-6 py-3 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-primary font-bold text-sm border border-outline-variant/30 shadow-xs transition-all flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-lg">person_add</span>

@@ -76,7 +76,7 @@ export default function AdminPublicacionesPage() {
   const [pubForm, setPubForm] = useState(EMPTY_PUB_FORM);
   const [savingPub, setSavingPub] = useState(false);
 
-  // Modal Documentos (CU14)
+  // Modal Documentos Digitales
   const [docsModalOpen, setDocsModalOpen] = useState(false);
   const [selectedPub, setSelectedPub] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -138,7 +138,7 @@ export default function AdminPublicacionesPage() {
     loadPublications();
   };
 
-  // Guardar nueva publicación (CU10, CU14, CU15)
+  // Guardar nueva publicación
   const handleSavePublication = async (e) => {
     e.preventDefault();
     setError('');
@@ -164,7 +164,7 @@ export default function AdminPublicacionesPage() {
       if (pubForm.referencias.trim()) formData.append('referencias', pubForm.referencias.trim());
       if (pubForm.investigador_id) formData.append('investigador_id', pubForm.investigador_id);
 
-      // Categorías seleccionadas (CU15)
+      // Categorías seleccionadas
       pubForm.categoria_ids.forEach((cId) => formData.append('categoria_ids', cId));
 
       // Palabras clave
@@ -173,7 +173,7 @@ export default function AdminPublicacionesPage() {
         terms.forEach((term) => formData.append('palabras_clave', term));
       }
 
-      // Documento digital inicial (CU14)
+      // Documento digital inicial
       if (pubForm.archivo) {
         formData.append('archivo', pubForm.archivo);
         if (pubForm.documento_titulo.trim()) {
@@ -202,7 +202,7 @@ export default function AdminPublicacionesPage() {
     }
   };
 
-  // Abrir modal de documentos digitales (CU14)
+  // Abrir modal de documentos digitales
   const openDocsModal = async (pub) => {
     setSelectedPub(pub);
     setDocsModalOpen(true);
@@ -222,7 +222,7 @@ export default function AdminPublicacionesPage() {
     }
   };
 
-  // Subir nuevo documento (CU14)
+  // Subir nuevo documento
   const handleUploadNewDoc = async (e) => {
     e.preventDefault();
     if (!newDocFile) {
@@ -253,7 +253,7 @@ export default function AdminPublicacionesPage() {
     }
   };
 
-  // Reemplazar archivo de documento (CU14)
+  // Reemplazar archivo de documento
   const handleReplaceDoc = async (docId) => {
     if (!replaceFile) {
       setError('Seleccione el nuevo archivo PDF para el reemplazo.');
@@ -278,7 +278,7 @@ export default function AdminPublicacionesPage() {
     }
   };
 
-  // Eliminar documento (CU14)
+  // Eliminar documento
   const handleDeleteDoc = async (docId, titulo) => {
     if (!window.confirm(`¿Confirma que desea eliminar el documento "${titulo}"? El archivo será borrado de forma permanente.`)) {
       return;
@@ -463,7 +463,7 @@ export default function AdminPublicacionesPage() {
                       )}
                     </td>
 
-                    {/* Clasificación (CU15) */}
+                    {/* Clasificación */}
                     <td className="py-3.5 px-4 max-w-[220px]">
                       {pub.categorias_lista && pub.categorias_lista.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
@@ -488,7 +488,7 @@ export default function AdminPublicacionesPage() {
                       <StatusBadge status={pub.estado} />
                     </td>
 
-                    {/* Documentos Digitales (CU14) */}
+                    {/* Documentos Digitales */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <button
                         onClick={() => openDocsModal(pub)}
@@ -519,7 +519,7 @@ export default function AdminPublicacionesPage() {
       </div>
 
       {/* =====================================================================
-          MODAL: NUEVA PUBLICACIÓN CIENTÍFICA (CU10, CU14, CU15)
+          MODAL: NUEVA PUBLICACIÓN CIENTÍFICA
       ====================================================================== */}
       {pubModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-xs sm:items-center sm:p-4">
@@ -612,10 +612,10 @@ export default function AdminPublicacionesPage() {
                 </select>
               </div>
 
-              {/* Clasificación Académica (CU15): Categorías */}
+              {/* Clasificación Académica: Categorías */}
               <div>
                 <label className="font-bold text-on-surface block mb-1">
-                  Clasificación y Categorías Temáticas (CU15)
+                  Clasificación y Categorías Temáticas
                 </label>
                 <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/20 max-h-36 overflow-y-auto space-y-1.5">
                   {categories.length === 0 ? (
@@ -684,11 +684,11 @@ export default function AdminPublicacionesPage() {
                 ></textarea>
               </div>
 
-              {/* CU14: Documento Digital PDF Opcional */}
+              {/* Documento Digital PDF Opcional */}
               <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/20 space-y-2">
                 <div className="flex items-center gap-1.5 font-bold text-primary">
                   <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-                  <span>Adjuntar Documento Digital Inicial (PDF - CU14)</span>
+                  <span>Adjuntar Documento Digital Inicial (PDF)</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
@@ -743,7 +743,7 @@ export default function AdminPublicacionesPage() {
       )}
 
       {/* =====================================================================
-          MODAL: ADMINISTRAR DOCUMENTOS DIGITALES (CU14)
+          MODAL: ADMINISTRAR DOCUMENTOS DIGITALES
       ====================================================================== */}
       {docsModalOpen && selectedPub && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-xs sm:items-center sm:p-4">
@@ -849,7 +849,7 @@ export default function AdminPublicacionesPage() {
               )}
             </div>
 
-            {/* Formulario: Subir Nuevo Documento (CU14) */}
+            {/* Formulario: Subir Nuevo Documento */}
             <form onSubmit={handleUploadNewDoc} className="pt-3 border-t border-outline-variant/20 space-y-3">
               <span className="text-xs font-bold text-primary block">Adjuntar Nuevo Documento PDF</span>
 

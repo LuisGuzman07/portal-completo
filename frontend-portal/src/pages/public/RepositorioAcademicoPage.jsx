@@ -11,36 +11,17 @@ export default function RepositorioAcademicoPage() {
   const [types, setTypes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [investigators, setInvestigators] = useState([]);
-  const [hasActiveInstitutionalAccess, setHasActiveInstitutionalAccess] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Search & Filter State (CU16)
+  // Search & Filter State
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedInvestigator, setSelectedInvestigator] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
-
-  // Publication Detail Modal State (CU12, CU13)
-  const [selectedPub, setSelectedPub] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [downloadingDocId, setDownloadingDocId] = useState(null);
-
-  useEffect(() => {
-    let current = true;
-    if (!isAuthenticated) {
-      setHasActiveInstitutionalAccess(false);
-      return () => { current = false; };
-    }
-    repositoryService.accessStatus()
-      .then((access) => { if (current) setHasActiveInstitutionalAccess(Boolean(access.documentos_miembros)); })
-      .catch(() => { if (current) setHasActiveInstitutionalAccess(false); });
-    return () => { current = false; };
-  }, [isAuthenticated, user?.id]);
 
   // Load Catalogs on Mount
   useEffect(() => {
@@ -97,47 +78,9 @@ export default function RepositorioAcademicoPage() {
     setSelectedCategory('');
     setSelectedInvestigator('');
     setSelectedYear('');
-    // Trigger immediate reload
     setTimeout(() => {
       fetchRepository();
     }, 0);
-  };
-
-  const openPublicationDetail = async (pubId) => {
-    setDetailLoading(true);
-    setModalOpen(true);
-    try {
-      const detail = await repositoryService.get(pubId);
-      setSelectedPub(detail);
-    } catch (err) {
-      setError(err?.data?.detail || 'No se pudo obtener el detalle de la investigación seleccionada.');
-      setModalOpen(false);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const handleDownload = async (doc) => {
-    setDownloadingDocId(doc.id);
-    setError('');
-    setSuccessMsg('');
-    try {
-      await publicationService.downloadDocumentBlob(doc.id, doc.nombre_original);
-      setSuccessMsg(`Descarga iniciada: ${doc.nombre_original}`);
-    } catch (err) {
-      setError(err.message || 'Error al descargar el archivo autorizado.');
-    } finally {
-      setDownloadingDocId(null);
-    }
-  };
-
-  const handlePreview = async (docId) => {
-    setError('');
-    try {
-      await publicationService.previewDocumentBlob(docId);
-    } catch (err) {
-      setError(err.message || 'No tiene permisos para previsualizar este documento.');
-    }
   };
 
   // Generate Year options (current down to 1980)
@@ -161,12 +104,22 @@ export default function RepositorioAcademicoPage() {
           <p className="text-sm md:text-base text-on-surface-variant max-w-3xl leading-relaxed">
             Consulte investigaciones arbitradas, dictámenes técnicos, monografías y artículos especializados avalados por la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).
           </p>
+
+          <div className="pt-2 flex flex-wrap gap-2 text-xs">
+            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-semibold flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">verified</span>
+              <span>Arbitraje Científico Editorial</span>
+            </span>
+            <span className="px-3 py-1 rounded-full bg-secondary/10 text-secondary font-semibold flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">lock_open</span>
+              <span>Acceso Abierto a la Evidencia</span>
+            </span>
+          </div>
         </div>
       </section>
 
       {/* Main Content Area */}
-      <div className="max-w-[1240px] mx-auto px-margin-mobile md:px-margin-desktop py-8 space-y-6">
-        {/* Global Notifications */}
+      <div className="max-w-[1240px] mx-auto py-8 px-margin-mobile md:px-margin-desktop space-y-6">
         {error && (
           <div className="p-4 bg-error-container/30 border border-error/30 rounded-2xl text-error text-sm flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -191,7 +144,7 @@ export default function RepositorioAcademicoPage() {
           </div>
         )}
 
-        {/* SEARCH AND COMBINED FILTERS SECTION (CU16) */}
+        {/* SEARCH AND COMBINED FILTERS SECTION */}
         <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-5 md:p-6 shadow-sm space-y-4">
           <form onSubmit={handleSearchSubmit} className="space-y-4">
             {/* Primary Search Input */}
@@ -212,7 +165,7 @@ export default function RepositorioAcademicoPage() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-on-primary rounded-2xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0"
+                  className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-on-primary rounded-2xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-sm">search</span>
                   Buscar
@@ -220,7 +173,7 @@ export default function RepositorioAcademicoPage() {
                 <button
                   type="button"
                   onClick={handleClearFilters}
-                  className="px-4 py-2.5 border border-outline-variant/40 hover:bg-surface-container rounded-2xl text-xs font-semibold text-on-surface-variant transition-all shrink-0"
+                  className="px-4 py-2.5 border border-outline-variant/40 hover:bg-surface-container rounded-2xl text-xs font-semibold text-on-surface-variant transition-all shrink-0 cursor-pointer"
                 >
                   Limpiar Filtros
                 </button>
@@ -241,15 +194,17 @@ export default function RepositorioAcademicoPage() {
                 >
                   <option value="">Todos los tipos</option>
                   {types.map((t) => (
-                    <option key={t.id} value={t.id}>{t.nombre}</option>
+                    <option key={t.id} value={t.id}>
+                      {t.nombre}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {/* Category Filter */}
+              {/* Thematic Category Filter */}
               <div>
                 <label className="block text-[11px] font-bold text-outline uppercase tracking-wider mb-1">
-                  Categoría Académica
+                  Categoría Temática
                 </label>
                 <select
                   value={selectedCategory}
@@ -259,16 +214,16 @@ export default function RepositorioAcademicoPage() {
                   <option value="">Todas las categorías</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.area_nombre ? `${c.area_nombre} - ${c.nombre}` : c.nombre}
+                      {c.nombre} {c.area ? `(${c.area.nombre || 'Área'})` : ''}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Investigator Filter */}
+              {/* Investigator / Author Filter */}
               <div>
                 <label className="block text-[11px] font-bold text-outline uppercase tracking-wider mb-1">
-                  Investigador / Autor
+                  Investigador Acreditado
                 </label>
                 <select
                   value={selectedInvestigator}
@@ -277,8 +232,8 @@ export default function RepositorioAcademicoPage() {
                 >
                   <option value="">Todos los investigadores</option>
                   {investigators.map((inv) => (
-                    <option key={inv.investigador_id} value={inv.investigador_id}>
-                      {inv.nombre_completo} ({inv.institucion || 'ABOCCRIM'})
+                    <option key={inv.id} value={inv.id}>
+                      {inv.nombres} {inv.apellidos}
                     </option>
                   ))}
                 </select>
@@ -296,7 +251,9 @@ export default function RepositorioAcademicoPage() {
                 >
                   <option value="">Todos los años</option>
                   {years.map((y) => (
-                    <option key={y} value={y}>{y}</option>
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -316,7 +273,7 @@ export default function RepositorioAcademicoPage() {
           </div>
         </div>
 
-        {/* PUBLICATIONS LIST / REPOSITORY CATALOG (CU12) */}
+        {/* PUBLICATIONS LIST / REPOSITORY CATALOG */}
         {loading ? (
           <div className="p-16 text-center text-on-surface-variant text-sm flex flex-col items-center gap-3">
             <span className="material-symbols-outlined text-4xl animate-spin text-primary">progress_activity</span>
@@ -331,7 +288,7 @@ export default function RepositorioAcademicoPage() {
             </p>
             <button
               onClick={handleClearFilters}
-              className="mt-2 px-4 py-2 rounded-xl bg-primary-container text-on-primary text-xs font-bold hover:bg-primary transition-all"
+              className="mt-2 px-4 py-2 rounded-xl bg-primary-container text-on-primary text-xs font-bold hover:bg-primary transition-all cursor-pointer"
             >
               Restablecer Catálogo
             </button>
@@ -370,7 +327,9 @@ export default function RepositorioAcademicoPage() {
 
                     {/* Title */}
                     <h2 className="text-base font-bold text-primary group-hover:text-primary-hover leading-snug line-clamp-2">
-                      {pub.titulo}
+                      <Link to={`/repositorio/${pub.id}`} className="hover:underline">
+                        {pub.titulo}
+                      </Link>
                     </h2>
 
                     {/* Authors & Affiliation */}
@@ -416,14 +375,13 @@ export default function RepositorioAcademicoPage() {
                       <span>{pub.documentos_count || 0} archivo(s)</span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => openPublicationDetail(pub.id)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-container-high hover:bg-primary hover:text-on-primary text-primary font-bold text-xs transition-all"
+                    <Link
+                      to={`/repositorio/${pub.id}`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-container-high hover:bg-primary hover:text-on-primary text-primary font-bold text-xs transition-all shadow-2xs"
                     >
-                      <span>Ver Documentos</span>
+                      <span>Ver publicación</span>
                       <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                    </button>
+                    </Link>
                   </div>
                 </article>
               );
@@ -431,234 +389,6 @@ export default function RepositorioAcademicoPage() {
           </div>
         )}
       </div>
-
-      {/* PUBLICATION DETAILS & DOCUMENT DOWNLOAD MODAL (CU12, CU13) */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-on-surface/50 p-3 backdrop-blur-xs sm:items-center sm:p-4">
-          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
-            {detailLoading || !selectedPub ? (
-              <div className="p-12 text-center text-on-surface-variant text-sm flex flex-col items-center gap-3">
-                <span className="material-symbols-outlined text-3xl animate-spin text-primary">progress_activity</span>
-                <span>Cargando publicación y documentos oficiales...</span>
-              </div>
-            ) : (
-              <>
-                {/* Modal Header */}
-                <div className="flex items-start justify-between border-b border-outline-variant/20 pb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-md bg-secondary/10 text-secondary font-bold text-[10px] uppercase">
-                        {selectedPub.tipo_nombre || 'Publicación Científica'}
-                      </span>
-                      {selectedPub.anio && (
-                        <span className="px-2 py-0.5 rounded-md bg-surface-container-high text-on-surface font-mono text-[10px] font-bold">
-                          {selectedPub.anio}
-                        </span>
-                      )}
-                      {selectedPub.fecha_publicacion && (
-                        <span className="text-[11px] text-outline font-mono">
-                          Publicado: {selectedPub.fecha_publicacion}
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="text-xl font-bold text-primary mt-1 leading-snug">
-                      {selectedPub.titulo}
-                    </h2>
-                  </div>
-
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="p-1 rounded-lg text-outline hover:text-on-surface"
-                  >
-                    <span className="material-symbols-outlined text-xl">close</span>
-                  </button>
-                </div>
-
-                {/* Metadata details */}
-                <div className="space-y-4 text-xs">
-                  {/* Authors Section */}
-                  <div className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/20 space-y-2">
-                    <span className="font-bold text-outline uppercase tracking-wider text-[11px] block">
-                      Autores e Investigadores:
-                    </span>
-                    <div className="flex flex-wrap gap-3">
-                      {selectedPub.autores_lista?.map((aut) => (
-                        <div key={aut.id} className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-xs">
-                            {aut.nombres?.charAt(0)}{aut.apellidos?.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="font-bold text-primary">{aut.nombre_completo}</div>
-                            <div className="text-[10px] text-outline">{aut.afiliacion || 'ABOCCRIM'} {aut.orcid ? `· ORCID: ${aut.orcid}` : ''}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Resumen */}
-                  {selectedPub.resumen && (
-                    <div>
-                      <span className="font-bold text-outline uppercase tracking-wider text-[11px] block mb-1">
-                        Resumen Científico / Abstract:
-                      </span>
-                      <p className="text-on-surface leading-relaxed p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/20">
-                        {selectedPub.resumen}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Categories & Keywords */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/20">
-                      <span className="font-bold text-outline uppercase tracking-wider text-[10px] block mb-1">
-                        Áreas y Categorías:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedPub.categorias_lista?.map((c) => (
-                          <span key={c.id} className="px-2 py-0.5 rounded bg-surface-container-high text-primary font-semibold text-[10px]">
-                            {c.nombre}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/20">
-                      <span className="font-bold text-outline uppercase tracking-wider text-[10px] block mb-1">
-                        Palabras Clave:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedPub.palabras_clave_lista?.map((p) => (
-                          <span key={p} className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-[10px]">
-                            #{p}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Referencias bibliográficas */}
-                  {selectedPub.referencias && (
-                    <div>
-                      <span className="font-bold text-outline uppercase tracking-wider text-[11px] block mb-1">
-                        Referencias Bibliográficas:
-                      </span>
-                      <p className="text-on-surface-variant font-mono text-[11px] leading-relaxed p-3 bg-surface-container-low rounded-xl border border-outline-variant/20 whitespace-pre-line">
-                        {selectedPub.referencias}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* CU13: DOCUMENTOS DIGITALES ASOCIADOS Y DESCARGA AUTORIZADA */}
-                  <div className="pt-2 border-t border-outline-variant/20 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-primary uppercase tracking-wider text-xs flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-base text-red-600">picture_as_pdf</span>
-                        Documentos Digitales Acreditados ({selectedPub.documentos?.length || 0})
-                      </span>
-                      <span className="text-[10px] text-outline font-mono">
-                        Almacenamiento Local Seguro ABOCCRIM
-                      </span>
-                    </div>
-
-                    {selectedPub.documentos?.length === 0 ? (
-                      <p className="p-4 text-center text-outline text-xs bg-surface-container-low rounded-xl">
-                        No hay archivos PDF disponibles para descarga en esta publicación.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {selectedPub.documentos?.map((doc) => {
-                          const isRestricted = doc.nivel_acceso === 'restringido';
-                          const isMembersOnly = doc.nivel_acceso === 'miembros';
-                          const canDownloadMembers = hasStaffPrivileges || hasActiveInstitutionalAccess || selectedPub.es_propietario;
-                          const canDownloadRestricted = hasStaffPrivileges || selectedPub.es_propietario;
-
-                          return (
-                            <div
-                              key={doc.id}
-                              className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                            >
-                              <div className="flex items-start gap-3">
-                                <span className="material-symbols-outlined text-red-600 text-3xl shrink-0">
-                                  picture_as_pdf
-                                </span>
-                                <div>
-                                  <div className="font-bold text-primary text-xs">{doc.titulo}</div>
-                                  <div className="text-[10px] text-on-surface-variant font-mono mt-0.5">
-                                    {doc.nombre_original} · {(doc.tamano_bytes / 1024).toFixed(1)} KB
-                                  </div>
-                                  <div className="mt-1 flex items-center gap-1.5">
-                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase font-mono ${
-                                      doc.nivel_acceso === 'publico'
-                                        ? 'bg-green-500/10 text-green-700'
-                                        : doc.nivel_acceso === 'miembros'
-                                        ? 'bg-secondary/10 text-secondary'
-                                        : 'bg-error/10 text-error'
-                                    }`}>
-                                      Nivel: {doc.nivel_acceso}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 self-end sm:self-auto">
-                                {doc.nivel_acceso === 'publico' || (isMembersOnly && canDownloadMembers) || (isRestricted && canDownloadRestricted) ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => handlePreview(doc.id)}
-                                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-outline-variant/40 hover:bg-surface-container text-primary font-bold text-xs"
-                                    >
-                                      <span className="material-symbols-outlined text-sm">visibility</span>
-                                      Previsualizar
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={downloadingDocId === doc.id}
-                                      onClick={() => handleDownload(doc)}
-                                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs shadow-xs"
-                                    >
-                                      <span className={`material-symbols-outlined text-sm ${downloadingDocId === doc.id ? 'animate-spin' : ''}`}>
-                                        {downloadingDocId === doc.id ? 'progress_activity' : 'download'}
-                                      </span>
-                                      Descargar PDF
-                                    </button>
-                                  </>
-                                ) : (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-outline italic">{isAuthenticated ? 'Requiere membresía o acreditación activa' : 'Requiere inicio de sesión'}</span>
-                                    {!isAuthenticated && <Link
-                                      to="/acceso-miembros"
-                                      className="px-3 py-1.5 rounded-xl bg-secondary hover:bg-secondary/90 text-on-secondary text-xs font-bold"
-                                    >
-                                      Acceder
-                                    </Link>}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex justify-end pt-3 border-t border-outline-variant/20">
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(false)}
-                    className="px-5 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container text-on-surface font-semibold text-xs"
-                  >
-                    Cerrar Detalle
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

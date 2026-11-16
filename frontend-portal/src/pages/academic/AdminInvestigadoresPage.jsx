@@ -198,7 +198,7 @@ export default function AdminInvestigadoresPage() {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-secondary">CU07 · Directorio académico</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-secondary">Directorio académico</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-primary">Administración de Investigadores</h1>
           <p className="mt-1 text-sm text-on-surface-variant">Revisa solicitudes, asigna áreas y administra el estado y la publicación de cada perfil.</p>
         </div>
@@ -224,7 +224,7 @@ export default function AdminInvestigadoresPage() {
           {areas.length === 0 && <button onClick={() => { setEditingArea(null); setAreaForm({ nombre: '', descripcion: '' }); setAreaModalOpen(true); }} className="shrink-0 rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-bold text-sky-950 hover:bg-sky-100">Crear primera área</button>}
         </div>
         <ol className="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
-          <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-primary">1 · Pendiente</span><span className="mt-1 block text-on-surface-variant">Revisar grado, institución, especialidad, biografía y ORCID.</span></li>
+          <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-primary">1 · Pendiente</span><span className="mt-1 block text-on-surface-variant">Revisar grado, institución, especialidad y biografía.</span></li>
           <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-orange-800">2 · Observado</span><span className="mt-1 block text-on-surface-variant">Pedir correcciones concretas; la persona puede actualizar y reenviar.</span></li>
           <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-emerald-800">3 · Aprobar</span><span className="mt-1 block text-on-surface-variant">Asignar al menos un área y decidir si se publica en el directorio.</span></li>
           <li className="rounded-lg bg-white/80 p-3"><span className="font-bold text-rose-800">4 · Rechazar</span><span className="mt-1 block text-on-surface-variant">Cerrar la solicitud con un motivo visible para quien la envió.</span></li>
@@ -251,7 +251,7 @@ export default function AdminInvestigadoresPage() {
 
       {availableProfiles.length === 0 && investigators.length === 0 && !loading && (
         <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
-          Todavía no hay solicitudes para revisar. Cada investigador completa su perfil en CU06 y luego solicita aparecer en el directorio. También puedes vincular perfiles existentes autorizados por ABOCCRIM.
+          Todavía no hay solicitudes para revisar. Cada investigador completa su perfil institucional y luego solicita aparecer en el directorio. También puedes vincular perfiles existentes autorizados por ABOCCRIM.
         </div>
       )}
 
@@ -318,11 +318,10 @@ export default function AdminInvestigadoresPage() {
               {editing && (
                 <section className="space-y-3 rounded-xl border border-outline-variant/30 bg-surface-container-low p-4">
                   <h3 className="text-sm font-bold text-primary">Revisión del perfil</h3>
-                  <div className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div className="grid gap-3 text-sm sm:grid-cols-3">
                     <p><span className="font-semibold">Grado:</span> {editing.grado_academico || 'No registrado'}</p>
                     <p><span className="font-semibold">Institución:</span> {editing.institucion || 'No registrada'}</p>
                     <p><span className="font-semibold">Especialidad:</span> {editing.especialidad || 'No registrada'}</p>
-                    <p><span className="font-semibold">ORCID:</span> {editing.orcid || 'No proporcionado'}</p>
                   </div>
                   <div className="rounded-lg bg-surface-container-lowest p-3"><p className="mb-1 text-xs font-bold uppercase text-outline">Biografía académica</p><p className="whitespace-pre-wrap text-sm text-on-surface">{editing.biografia || 'No registrada'}</p></div>
                   {!!editing.historial_revision?.length && <div><p className="mb-2 text-xs font-bold uppercase text-outline">Historial de solicitudes y decisiones</p><ol className="max-h-40 space-y-2 overflow-y-auto">{editing.historial_revision.map((entry, index) => <li key={`${entry.fecha}-${index}`} className="rounded-lg bg-surface-container-lowest p-3 text-xs"><p className="font-semibold text-primary">{entry.accion.replaceAll('_', ' ')} · {entry.usuario} · {new Date(entry.fecha).toLocaleString('es-BO')}</p><p className="mt-1 whitespace-pre-wrap text-on-surface-variant">{entry.detalle}</p></li>)}</ol></div>}
@@ -338,7 +337,7 @@ export default function AdminInvestigadoresPage() {
                     {availableProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.nombres} {profile.apellidos} · {profile.email}</option>)}
                   </select>
                 )}
-                {!editing && availableProfiles.length === 0 && <p className="text-xs text-amber-800">No hay perfiles disponibles. Deben registrarse desde CU06 antes de crear el investigador.</p>}
+                {!editing && availableProfiles.length === 0 && <p className="text-xs text-amber-800">No hay perfiles disponibles. Deben registrar un perfil académico de usuario antes de vincular al investigador.</p>}
               </label>
 
               <div className="grid gap-4 sm:grid-cols-2">

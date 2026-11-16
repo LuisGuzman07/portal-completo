@@ -120,7 +120,7 @@ export default function AdminConveniosPage() {
   return (
     <section className="space-y-6">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">CU21 · gestión institucional</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-primary">Convenios institucionales</h1><p className="mt-2 max-w-2xl text-sm text-on-surface-variant">Registra acuerdos, su institución contraparte, vigencia y una referencia documental autorizada para difusión.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Gestión institucional · Convenios</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-primary">Convenios institucionales</h1><p className="mt-2 max-w-2xl text-sm text-on-surface-variant">Registra acuerdos, su institución contraparte, vigencia y una referencia documental autorizada para difusión.</p></div>
         <a href="/convenios" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm font-bold text-primary"><span className="material-symbols-outlined">open_in_new</span> Ver portal público</a>
       </header>
 

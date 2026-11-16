@@ -49,11 +49,15 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/" className="hover:text-primary transition-colors font-medium">
+                <Link to="/institucional" className="hover:text-primary transition-colors font-medium">
                   Portal Institucional
                 </Link>
               </li>
-              <li>Estatuto Orgánico y Reglamentos</li>
+              <li>
+                <Link to="/institucional?seccion=normativa" className="hover:text-primary transition-colors font-medium">
+                  Estatuto Orgánico y Reglamentos
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

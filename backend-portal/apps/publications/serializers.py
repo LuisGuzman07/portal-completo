@@ -251,11 +251,26 @@ class PublicacionPublicaListSerializer(PublicacionListSerializer):
 class PublicacionPublicaDetailSerializer(PublicacionPublicaListSerializer):
     documentos = serializers.SerializerMethodField()
     es_propietario = serializers.SerializerMethodField()
+    vistas_count = serializers.SerializerMethodField()
+    descargas_count = serializers.SerializerMethodField()
 
     class Meta(PublicacionPublicaListSerializer.Meta):
         fields = PublicacionPublicaListSerializer.Meta.fields + [
-            'referencias', 'documentos', 'es_propietario',
+            'referencias', 'documentos', 'es_propietario', 'vistas_count', 'descargas_count',
         ]
+
+    def get_vistas_count(self, obj):
+        try:
+            return obj.visualizaciones.count()
+        except Exception:
+            return 0
+
+    def get_descargas_count(self, obj):
+        try:
+            from apps.publications.models import DescargaDocumento
+            return DescargaDocumento.objects.filter(documento__publicacion_id=obj.id).count()
+        except Exception:
+            return 0
 
     def get_es_propietario(self, obj):
         request = self.context.get('request')

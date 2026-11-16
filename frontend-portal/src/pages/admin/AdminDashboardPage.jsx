@@ -18,7 +18,7 @@ export default function AdminDashboardPage() {
             Bienvenido, {user?.nombres} {user?.apellidos}
           </h1>
           <p className="text-xs md:text-sm text-primary-fixed-dim leading-relaxed">
-            Consola administrativa y académica del Sistema Web de Gestión Institucional. Sus módulos y operaciones habilitadas corresponden a los roles y permisos validados en el servidor.
+            Consola administrativa y académica del Sistema Web de Gestión Institucional. Los módulos y operaciones disponibles se adaptan a su nivel de acceso institucional.
           </p>
           <div className="pt-2 flex flex-wrap gap-1.5">
             {user?.roles_codigos?.map((r) => (
@@ -45,7 +45,7 @@ export default function AdminDashboardPage() {
               Mi Perfil Académico
             </h3>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Gestionar grado académico, filiación institucional, especialidad, biografía científica y registro ORCID.
+              Gestionar grado académico, filiación institucional, especialidad y biografía científica.
             </p>
           </div>
           <div className="pt-4 flex items-center gap-1 text-xs font-bold text-secondary group-hover:translate-x-1 transition-transform">
@@ -76,7 +76,7 @@ export default function AdminDashboardPage() {
           </div>
         </Link>
 
-        {/* Revisión de Publicaciones (CU11) */}
+        {/* Revisión de Publicaciones */}
         {(isSuperAdmin || isAdminAcademico || user?.roles_codigos?.includes('comite_academico')) && (
           <Link
             to="/dashboard/revisiones"
@@ -100,7 +100,7 @@ export default function AdminDashboardPage() {
           </Link>
         )}
 
-        {/* Gestión de Investigadores (CU07) */}
+        {/* Gestión de Investigadores */}
         {(isSuperAdmin || isAdminAcademico) && (
           <Link
             to="/dashboard/investigadores"
@@ -148,7 +148,7 @@ export default function AdminDashboardPage() {
           </Link>
         )}
 
-        {/* Administrar Usuarios (CU04) */}
+        {/* Administrar Usuarios */}
         {(isSuperAdmin || hasPermission('usuarios.listar')) && (
           <Link
             to="/dashboard/usuarios"
@@ -172,7 +172,7 @@ export default function AdminDashboardPage() {
           </Link>
         )}
 
-        {/* Roles y Permisos (CU05) */}
+        {/* Roles y Permisos */}
         {(isSuperAdmin || hasPermission('roles.listar')) && (
           <Link
             to="/dashboard/roles"
@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
           Alcance de la Plataforma Institucional
         </h4>
         <p className="text-xs text-on-surface-variant leading-relaxed">
-          Se encuentran plenamente operativas las funciones de autenticación JWT y cierre de sesión seguro, gestión técnica de usuarios, control de acceso basado en roles y permisos (RBAC), gestión de perfil académico propio, administración colegiada de investigadores y miembros ABOCCRIM, y directorio público de investigadores.
+          Se encuentran plenamente operativas las funciones de autenticación institucional, administración de usuarios, control de accesos y permisos, gestión del perfil académico, administración colegiada de investigadores y miembros ABOCCRIM, y directorio público institucional.
         </p>
       </div>
     </div>
