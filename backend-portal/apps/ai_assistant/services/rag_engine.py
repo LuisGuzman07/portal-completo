@@ -1,4 +1,5 @@
 import math
+import re
 from django.db import transaction
 from django.utils import timezone
 
@@ -20,6 +21,23 @@ def cosine_similarity(v1: list[float], v2: list[float]) -> float:
     return dot / (norm1 * norm2)
 
 
+def is_conversational_or_greeting(text: str) -> bool:
+    """Detecta si el mensaje es un saludo o pregunta conversacional básica sobre el asistente."""
+    cleaned = re.sub(r'[^\w\s]', '', text.lower()).strip()
+    words = cleaned.split()
+    if len(words) <= 8:
+        greeting_patterns = [
+            'hola', 'buenas', 'buen dia', 'buenos dias', 'buenas tardes', 'buenas noches',
+            'saludos', 'que tal', 'como estas', 'en que puedes ayudarme', 'en que me ayudas',
+            'que puedes hacer', 'quien eres', 'para que sirves', 'ayuda', 'hola que tal',
+            'gracias', 'muchas gracias', 'adios', 'chao', 'hasta luego'
+        ]
+        for pattern in greeting_patterns:
+            if pattern in cleaned:
+                return True
+    return False
+
+
 def format_apa_citation(pub: Publicacion) -> str:
     """Genera la cita bibliográfica en formato estándar académico."""
     autores = [a.nombre_completo for a in pub.autores.all()]
@@ -31,18 +49,37 @@ def format_apa_citation(pub: Publicacion) -> str:
 class RAGQueryEngine:
     """
     Motor principal de Generación Aumentada por Recuperación (RAG) de ABOCCRIM.
+    Combina recuperación precisa del repositorio institucional con capacidad de respuesta general.
     """
 
-    SYSTEM_INSTRUCTION = (
-        "Eres el Asistente Académico Inteligente de la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM). "
-        "Tu misión es responder consultas de investigadores basándote EXCLUSIVAMENTE en los fragmentos documentales provistos del repositorio institucional.\n\n"
+    SYSTEM_INSTRUCTION_RAG = (
+        "Eres el Asistente Académico Inteligente de la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).\n"
+        "Se te han proporcionado fragmentos relevantes del repositorio institucional para responder la consulta.\n\n"
         "REGLAS ESTATUTARIAS:\n"
-        "1. No inventes autores, publicaciones, páginas, años ni datos que no figuren en los fragmentos provistos.\n"
+        "1. Responde con rigurosidad académica y fundamenta tus afirmaciones en los fragmentos provistos.\n"
         "2. Cada afirmación importante debe llevar su cita numérica entre corchetes, por ejemplo [1], [2], correspondiente al orden de los documentos provistos.\n"
         "3. Emplea un lenguaje académico, formal, riguroso y pedagógico, propio de las ciencias criminológicas y jurídicas.\n"
-        "4. Si la información provista es insuficiente para responder a la pregunta con exactitud, declara con total honestidad: "
-        "'No se encontró información suficiente en los documentos autorizados del repositorio ABOCCRIM para responder esta consulta.'\n"
-        "5. No hagas alusión a fuentes ajenas a los fragmentos institucionales provistos."
+        "4. Si algún aspecto de la pregunta no está en los fragmentos, puedes complementar brevemente desde la doctrina general aclarando dicha distinción."
+    )
+
+    SYSTEM_INSTRUCTION_GREETING = (
+        "Eres el Asistente Académico Inteligente de la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).\n"
+        "El usuario te está saludando o consultando sobre tus funciones.\n"
+        "Responde con cordialidad, elegancia académica y brevedad (máximo 3 párrafos cortos).\n"
+        "Preséntate, dale la bienvenida a la plataforma institucional y explícale que puedes orientarlo sobre las "
+        "publicaciones, tesis e investigaciones del repositorio de ABOCCRIM, así como resolver dudas sobre ciencias criminológicas, "
+        "criminalística y derecho penal. Invítalo amablemente a realizar su consulta."
+    )
+
+    SYSTEM_INSTRUCTION_GENERAL = (
+        "Eres el Asistente Académico Inteligente de la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).\n"
+        "El usuario realiza una consulta académica para la cual NO se encontraron documentos específicos en el repositorio de ABOCCRIM.\n\n"
+        "REGLAS OBLIGATORIAS:\n"
+        "1. Inicia OBLIGATORIAMENTE tu respuesta advirtiendo claramente con este aviso:\n"
+        "*(Nota: Esta respuesta se fundamenta en doctrina y principios criminológicos/jurídicos generales, ya que actualmente no contamos con publicaciones específicas sobre este tema dentro del repositorio institucional de ABOCCRIM.)*\n\n"
+        "2. Responde a la pregunta del usuario con una explicación clara, rigurosa, pedagógica y completa basada en tus conocimientos.\n"
+        "3. NO uses citas con números como [1] o [2] porque no provienen de documentos del repositorio.\n"
+        "4. Concluye invitando amablemente al usuario a consultar sobre otras investigaciones o temas del repositorio."
     )
 
     @classmethod
@@ -78,7 +115,6 @@ class RAGQueryEngine:
         if conversacion_id:
             conversacion = ConversacionIA.objects.get(pk=conversacion_id, usuario=user)
         else:
-            # Crear nueva conversación con título preliminar
             titulo_auto = query_text[:50] + ('...' if len(query_text) > 50 else '')
             conversacion = ConversacionIA.objects.create(
                 usuario=user,
@@ -91,6 +127,28 @@ class RAGQueryEngine:
             rol='user',
             contenido=query_text
         )
+
+        # CASO 1: Saludos o preguntas sobre el asistente
+        if is_conversational_or_greeting(query_text):
+            respuesta_texto = LLMService.generate_content(
+                prompt=query_text,
+                system_instruction=cls.SYSTEM_INSTRUCTION_GREETING
+            )
+            with transaction.atomic():
+                mensaje_asistente = MensajeIA.objects.create(
+                    conversacion=conversacion,
+                    rol='assistant',
+                    contenido=respuesta_texto
+                )
+                conversacion.save(update_fields=['fecha_actualizacion'])
+
+            return {
+                'conversacion_id': conversacion.id,
+                'conversacion_titulo': conversacion.titulo,
+                'mensaje_id': mensaje_asistente.id,
+                'contenido': respuesta_texto,
+                'fuentes_consultadas': [],
+            }
 
         # 3. Determinar permisos de acceso a documentos
         allowed_access = cls.determine_user_access(user)
@@ -108,42 +166,47 @@ class RAGQueryEngine:
             'documento_indexado__documento',
         ).prefetch_related('publicacion__autores')
 
-        # 6. Calcular similitud coseno y rankear
+        # 6. Calcular similitud coseno con umbral estricto de relevancia
+        # Para nomic-embed-text, coincidencias genuinas superan 0.68
+        SIMILARITY_THRESHOLD = 0.68
         scored_fragments = []
         for frag in fragmentos_qs:
             emb = frag.embedding
             if emb and isinstance(emb, list):
                 sim = cosine_similarity(query_vector, emb)
-                if sim > 0.15:  # Umbral mínimo de relevancia
+                if sim >= SIMILARITY_THRESHOLD:
                     scored_fragments.append((sim, frag))
 
         scored_fragments.sort(key=lambda x: x[0], reverse=True)
-        # Seleccionar los 2 fragmentos más relevantes para optimizar inferencia rápida en CPU
-        top_fragments = scored_fragments[:2]
+        top_fragments = scored_fragments[:3]
 
-        # 7. Si no hay fragmentos relevantes en el repositorio
+        # CASO 2: No hay fragmentos relevantes en el repositorio -> Responder con conocimiento general + aviso
         if not top_fragments:
-            respuesta_sin_datos = (
-                "No se encontró información suficiente en los documentos autorizados del repositorio ABOCCRIM "
-                "para responder esta consulta. Le sugerimos revisar la Biblioteca Académica o consultar sobre "
-                "líneas de investigación activas de la institución."
+            general_prompt = (
+                f"CONSULTA DEL INVESTIGADOR:\n{query_text}\n\n"
+                f"RESPUESTA DOCTRINARIA (recuerda incluir el aviso institucional al inicio):"
             )
-            mensaje_asistente = MensajeIA.objects.create(
-                conversacion=conversacion,
-                rol='assistant',
-                contenido=respuesta_sin_datos
+            respuesta_texto = LLMService.generate_content(
+                prompt=general_prompt,
+                system_instruction=cls.SYSTEM_INSTRUCTION_GENERAL
             )
-            conversacion.save(update_fields=['fecha_actualizacion'])
+            with transaction.atomic():
+                mensaje_asistente = MensajeIA.objects.create(
+                    conversacion=conversacion,
+                    rol='assistant',
+                    contenido=respuesta_texto
+                )
+                conversacion.save(update_fields=['fecha_actualizacion'])
 
             return {
                 'conversacion_id': conversacion.id,
                 'conversacion_titulo': conversacion.titulo,
                 'mensaje_id': mensaje_asistente.id,
-                'contenido': respuesta_sin_datos,
+                'contenido': respuesta_texto,
                 'fuentes_consultadas': [],
             }
 
-        # 8. Construir contexto enriquecido para Gemini
+        # CASO 3: Hay fragmentos relevantes en el repositorio -> RAG con citas [1], [2]
         context_parts = []
         fuentes_data = []
 
@@ -157,7 +220,7 @@ class RAGQueryEngine:
                 f"AUTORES: {autores}\n"
                 f"AÑO: {pub.anio or 's.f.'}\n"
                 f"PÁGINA: {frag.numero_pagina}\n"
-                f"CONTENIDO: {frag.contenido}\n"
+                f"CONTENIDO: {frag.contenido}\n\n"
             )
 
             fuentes_data.append({
@@ -176,18 +239,16 @@ class RAGQueryEngine:
 
         context_prompt = (
             f"DOCUMENTOS RECUPERADOS DEL REPOSITORIO ABOCCRIM:\n\n"
-            f"{''.join(context_parts)}\n\n"
+            f"{''.join(context_parts)}\n"
             f"CONSULTA DEL INVESTIGADOR:\n{query_text}\n\n"
             f"RESPUESTA ACADÉMICA FUNDAMENTADA:"
         )
 
-        # 9. Generar respuesta con LLM
         respuesta_texto = LLMService.generate_content(
             prompt=context_prompt,
-            system_instruction=cls.SYSTEM_INSTRUCTION
+            system_instruction=cls.SYSTEM_INSTRUCTION_RAG
         )
 
-        # 10. Persistir respuesta del asistente y fuentes consultadas en BD
         with transaction.atomic():
             mensaje_asistente = MensajeIA.objects.create(
                 conversacion=conversacion,
@@ -195,7 +256,6 @@ class RAGQueryEngine:
                 contenido=respuesta_texto
             )
 
-            # Asociar fuentes
             for f in fuentes_data:
                 FuenteMensajeIA.objects.create(
                     mensaje=mensaje_asistente,

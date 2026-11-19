@@ -42,7 +42,7 @@ def _get_ollama_embedding(text: str) -> list[float] | None:
         resp = requests.post(
             f"{base_url}/api/embeddings",
             json={"model": model, "prompt": text},
-            timeout=10,
+            timeout=60,
         )
         if resp.status_code == 200:
             data = resp.json()

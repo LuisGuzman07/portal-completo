@@ -60,10 +60,10 @@ class LLMService:
                         "prompt": full_prompt,
                         "stream": False,
                         "options": {
-                            "temperature": 0.2,
-                            "top_p": 0.8,
-                            "num_predict": 220,  # Conciso para responder en ~20s en CPU
-                            "num_ctx": 2048,
+                            "temperature": 0.3,
+                            "top_p": 0.85,
+                            "num_predict": 600,
+                            "num_ctx": 4096,
                         }
                     },
                     timeout=180
