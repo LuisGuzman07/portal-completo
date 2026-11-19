@@ -310,7 +310,15 @@ export default function AdminPublicacionesPage() {
       if (pubForm.investigador_id) formData.append('investigador_id', pubForm.investigador_id);
 
       // Categorías seleccionadas
-      pubForm.categoria_ids.forEach((cId) => formData.append('categoria_ids', cId));
+      pubForm.categoria_ids.forEach((cId) => {
+        if (typeof cId === 'string' && cId.startsWith('predef_')) {
+          const subName = cId.replace('predef_', '').trim();
+          const match = categories.find((c) => c.nombre.toLowerCase() === subName.toLowerCase());
+          formData.append('categoria_ids', match ? match.id : cId);
+        } else {
+          formData.append('categoria_ids', cId);
+        }
+      });
 
       // Palabras clave
       if (pubForm.palabras_clave.trim()) {
@@ -339,7 +347,12 @@ export default function AdminPublicacionesPage() {
       const d = err?.data;
       let msg = err.message || 'Error al registrar la publicación.';
       if (d && typeof d === 'object') {
-        msg = Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : v}`).join(' | ');
+        const formatErrors = (val) => {
+          if (Array.isArray(val)) return val.map(formatErrors).join(', ');
+          if (val && typeof val === 'object') return Object.values(val).map(formatErrors).join(', ');
+          return String(val);
+        };
+        msg = Object.entries(d).map(([k, v]) => `${k}: ${formatErrors(v)}`).join(' | ');
       }
       setError(msg);
     } finally {

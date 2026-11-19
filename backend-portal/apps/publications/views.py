@@ -145,8 +145,127 @@ def delete_physical_file(ruta_privada):
         print(f'Error al eliminar archivo {ruta_privada}: {e}')
 
 
+TAXONOMIA_INSTITUCIONAL = [
+    {
+        'numero': 1,
+        'nombre': '1. Criminología',
+        'descripcion': 'Estudio interdisciplinario de las conductas antisociales, etiología del delito y control social.',
+        'subareas': [
+            'Criminología Clínica',
+            'Criminología Crítica',
+            'Criminología Ambiental',
+            'Criminología Corporativa',
+        ],
+    },
+    {
+        'numero': 2,
+        'nombre': '2. Criminalística',
+        'descripcion': 'Aplicación de métodos y técnicas de investigación científica del hecho delictivo y sus indicios materiales.',
+        'subareas': [
+            'Escena del Crimen',
+            'Balística Forense',
+            'Documentología',
+            'Huellas y Lofoscopia',
+        ],
+    },
+    {
+        'numero': 3,
+        'nombre': '3. Ciencias Forenses',
+        'descripcion': 'Disciplinas biomédicas y científicas orientadas al auxilio pericial de la administración de justicia.',
+        'subareas': [
+            'Medicina Legal',
+            'Psicología Forense',
+            'Antropología Forense',
+            'Genética Forense / ADN',
+        ],
+    },
+    {
+        'numero': 4,
+        'nombre': '4. Victimología',
+        'descripcion': 'Atención integral, mitigación del daño y estudio científico de los procesos de victimización.',
+        'subareas': [
+            'Atención a Víctimas',
+            'Reparación Integral',
+            'Victimización Secundaria',
+            'Restitución de Derechos',
+        ],
+    },
+    {
+        'numero': 5,
+        'nombre': '5. Sistema Penal',
+        'descripcion': 'Dogmática jurídica penal, garantías procesales y gestión de los regímenes de ejecución penitenciaria.',
+        'subareas': [
+            'Política Criminal',
+            'Proceso Penal',
+            'Ejecución Penal',
+            'Justicia Restaurativa',
+        ],
+    },
+    {
+        'numero': 6,
+        'nombre': '6. Seguridad',
+        'descripcion': 'Estrategias de prevención situacional, seguridad pública, penitenciaria y gobernanza institucional.',
+        'subareas': [
+            'Seguridad Ciudadana',
+            'Seguridad Penitenciaria',
+            'Seguridad Institucional',
+            'Análisis Delictual',
+        ],
+    },
+    {
+        'numero': 7,
+        'nombre': '7. Violencia, Conflicto y Vulnerabilidad',
+        'descripcion': 'Fenomenología de la violencia interpersonal, colectiva y estructural en grupos en situación de vulnerabilidad.',
+        'subareas': [
+            'Violencia de Género',
+            'Violencia contra la Niñez',
+            'Trata y Tráfico Ilícito',
+            'Violencia Social e Interpersonal',
+        ],
+    },
+]
+
+
+def parse_and_resolve_category_ids(raw_cat_ids):
+    """
+    Convierte cualquier formato de IDs de categorías (enteros, strings numéricos,
+    strings con prefijo 'predef_' o nombres de categorías) en IDs enteros válidos de la BD.
+    """
+    if isinstance(raw_cat_ids, str):
+        raw_cat_ids = [c.strip() for c in raw_cat_ids.split(',') if c.strip()]
+    elif not isinstance(raw_cat_ids, (list, tuple)):
+        raw_cat_ids = [raw_cat_ids] if raw_cat_ids else []
+
+    clean_ids = []
+    for item in raw_cat_ids:
+        if item is None or item == '':
+            continue
+        item_str = str(item).strip()
+        if item_str.isdigit():
+            clean_ids.append(int(item_str))
+            continue
+
+        cat_name = item_str[7:].strip() if item_str.startswith('predef_') else item_str
+        cat_obj = Categoria.objects.filter(nombre__iexact=cat_name).first()
+        if not cat_obj:
+            default_area = AreaTematica.objects.first()
+            if not default_area:
+                default_area = AreaTematica.objects.create(
+                    nombre='1. Criminología',
+                    descripcion='Área institucional por defecto'
+                )
+            cat_obj = Categoria.objects.create(
+                area=default_area,
+                nombre=cat_name,
+                descripcion=f'Categoría institucional: {cat_name}'
+            )
+        clean_ids.append(cat_obj.id)
+
+    return list(dict.fromkeys(clean_ids))
+
+
 def ensure_catalogs_seeded():
-    """Siembra catálogos estándar si están vacíos para garantizar operatividad inmediata."""
+    """Siembra catálogos estándar y taxonomía institucional completa si faltan."""
     if TipoPublicacion.objects.count() == 0:
         default_types = [
             'Artículo Científico',
@@ -154,6 +273,7 @@ def ensure_catalogs_seeded():
             'Dictamen Pericial Forense',
             'Estudio de Caso Criminológico',
             'Tesis / Disertación Académica',
+            'Libro / Monografía Especializada',
         ]
         for t in default_types:
             TipoPublicacion.objects.get_or_create(nombre=t)
@@ -164,29 +284,22 @@ def ensure_catalogs_seeded():
             'Manuscrito Pre-print',
             'Dictamen / Informe Técnico',
             'Anexo Metodológico / Evidencia',
+            'Libro Completo (PDF)',
         ]
         for dt in default_doc_types:
             TipoDocumento.objects.get_or_create(nombre=dt)
 
-    if Categoria.objects.count() == 0:
-        area = AreaTematica.objects.first()
-        if not area:
-            area = AreaTematica.objects.create(
-                nombre='Ciencias Penales y Criminológicas',
-                descripcion='Línea de investigación institucional en criminología empírica y peritaje'
-            )
-        default_categories = [
-            'Criminología Clínica y Diagnóstica',
-            'Criminalística y Balística Forense',
-            'Psicología Jurídica y Forense',
-            'Victimología y Derechos Humanos',
-            'Política Criminal y Prevención',
-        ]
-        for cat_name in default_categories:
+    # Siembra y sincronización de las 7 Áreas y 28 Categorías institucionales
+    for item in TAXONOMIA_INSTITUCIONAL:
+        area, _ = AreaTematica.objects.get_or_create(
+            nombre=item['nombre'],
+            defaults={'descripcion': item['descripcion']}
+        )
+        for sub_name in item['subareas']:
             Categoria.objects.get_or_create(
                 area=area,
-                nombre=cat_name,
-                defaults={'descripcion': f'Investigación especializada en {cat_name}'}
+                nombre=sub_name,
+                defaults={'descripcion': f'Investigación institucional en {sub_name} ({item["nombre"]})'}
             )
 
 
@@ -346,14 +459,19 @@ class PublicacionListCreateView(views.APIView):
         ensure_catalogs_seeded()
         data = request.data.copy()
 
-        # Parsear listas si vienen en form-data multipart
-        categoria_ids = data.getlist('categoria_ids') if hasattr(data, 'getlist') and data.getlist('categoria_ids') else data.get('categoria_ids', [])
-        if isinstance(categoria_ids, str):
-            categoria_ids = [int(c.strip()) for c in categoria_ids.split(',') if c.strip().isdigit()]
+        # Parsear y resolver categorías para soportar enteros, strings o prefijos predef_
+        raw_cats = data.getlist('categoria_ids') if hasattr(data, 'getlist') and data.getlist('categoria_ids') else data.get('categoria_ids', [])
+        categoria_ids = parse_and_resolve_category_ids(raw_cats)
+        if hasattr(data, 'setlist'):
+            data.setlist('categoria_ids', categoria_ids)
+        else:
+            data['categoria_ids'] = categoria_ids
 
         palabras_clave = data.getlist('palabras_clave') if hasattr(data, 'getlist') and data.getlist('palabras_clave') else data.get('palabras_clave', [])
         if isinstance(palabras_clave, str):
             palabras_clave = [p.strip() for p in palabras_clave.split(',') if p.strip()]
+        if hasattr(data, 'setlist'):
+            data.setlist('palabras_clave', palabras_clave)
 
         serializer = PublicacionCreateUpdateSerializer(data=data)
         if not serializer.is_valid():
@@ -500,6 +618,16 @@ class PublicacionDetailView(views.APIView):
             return Response({'detail': perm.message}, status=status.HTTP_403_FORBIDDEN)
 
         data = request.data.copy()
+
+        # Parsear y resolver categorías para soportar enteros, strings o prefijos predef_
+        if 'categoria_ids' in data or (hasattr(data, 'getlist') and data.getlist('categoria_ids')):
+            raw_cats = data.getlist('categoria_ids') if hasattr(data, 'getlist') and data.getlist('categoria_ids') else data.get('categoria_ids', [])
+            clean_patch_cats = parse_and_resolve_category_ids(raw_cats)
+            if hasattr(data, 'setlist'):
+                data.setlist('categoria_ids', clean_patch_cats)
+            else:
+                data['categoria_ids'] = clean_patch_cats
+
         serializer = PublicacionCreateUpdateSerializer(pub, data=data, partial=True)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -508,9 +636,8 @@ class PublicacionDetailView(views.APIView):
 
         # Actualizar categorías si se especifican
         if 'categoria_ids' in data:
-            cat_ids = data.get('categoria_ids', [])
-            if isinstance(cat_ids, str):
-                cat_ids = [int(c.strip()) for c in cat_ids.split(',') if c.strip().isdigit()]
+            raw_cats = data.getlist('categoria_ids') if hasattr(data, 'getlist') and data.getlist('categoria_ids') else data.get('categoria_ids', [])
+            cat_ids = parse_and_resolve_category_ids(raw_cats)
             PublicacionCategoria.objects.filter(publicacion=pub).delete()
             for cat_id in cat_ids:
                 try:

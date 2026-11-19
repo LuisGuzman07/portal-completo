@@ -141,4 +141,12 @@ class Command(BaseCommand):
             status_str = "Creado" if created else "Actualizado"
             self.stdout.write(f"  [✓] {status_str}: {email} -> Rol: {rol.codigo} (Password: {demo_password})")
 
+        # 5. Catálogos y Taxonomía Institucional de Publicaciones
+        try:
+            from apps.publications.views import ensure_catalogs_seeded
+            ensure_catalogs_seeded()
+            self.stdout.write("  [✓] Catálogos y taxonomía institucional de publicaciones verificados/sincronizados.")
+        except Exception as ex:
+            self.stdout.write(f"  [!] Advertencia al sincronizar catálogos: {ex}")
+
         self.stdout.write(self.style.SUCCESS("=== Seed de demostración completado con éxito ==="))

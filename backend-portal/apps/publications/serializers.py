@@ -301,7 +301,7 @@ class PublicacionPropietarioDetailSerializer(PublicacionPublicaDetailSerializer)
 
 class PublicacionCreateUpdateSerializer(serializers.ModelSerializer):
     categoria_ids = serializers.ListField(
-        child=serializers.IntegerField(), required=False, write_only=True
+        required=False, write_only=True
     )
     palabras_clave = serializers.ListField(
         child=serializers.CharField(max_length=120), required=False, write_only=True
@@ -327,6 +327,27 @@ class PublicacionCreateUpdateSerializer(serializers.ModelSerializer):
             'autores_data',
         ]
         read_only_fields = ['id', 'estado']
+
+    def validate_categoria_ids(self, value):
+        from .models import Categoria
+        from apps.academics.models import AreaTematica
+        resolved = []
+        for item in value:
+            if item is None or item == '':
+                continue
+            item_str = str(item).strip()
+            if item_str.isdigit():
+                resolved.append(int(item_str))
+                continue
+            cat_name = item_str[7:].strip() if item_str.startswith('predef_') else item_str
+            cat = Categoria.objects.filter(nombre__iexact=cat_name).first()
+            if not cat:
+                default_area = AreaTematica.objects.first()
+                if not default_area:
+                    default_area = AreaTematica.objects.create(nombre='1. Criminología')
+                cat = Categoria.objects.create(area=default_area, nombre=cat_name)
+            resolved.append(cat.id)
+        return resolved
 
     def validate_titulo(self, value):
         v = value.strip()

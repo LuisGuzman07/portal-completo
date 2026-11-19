@@ -118,8 +118,13 @@ export default function MiSolicitudMembresiaPage() {
       let msg = 'No fue posible registrar la solicitud.';
       if (data?.detail) msg = data.detail;
       else if (data && typeof data === 'object') {
+        const formatErrors = (val) => {
+          if (Array.isArray(val)) return val.map(formatErrors).join(', ');
+          if (val && typeof val === 'object') return Object.values(val).map(formatErrors).join(', ');
+          return String(val);
+        };
         msg = Object.entries(data)
-          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : v}`)
+          .map(([k, v]) => `${k}: ${formatErrors(v)}`)
           .join(' | ');
       } else if (err.message) {
         msg = err.message;

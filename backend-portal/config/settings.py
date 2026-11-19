@@ -11,6 +11,8 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-aboccrim-portal-sup
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,backend,0.0.0.0').split(',') if h.strip()]
+if DEBUG and '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('*')
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
