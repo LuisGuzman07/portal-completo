@@ -1,0 +1,18 @@
+services:
+  novasoft-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_CONTACT_EMAIL=${VITE_CONTACT_EMAIL:-contacto@novasoft.dev}
+    image: novasoft-solutions-web:latest
+    container_name: novasoft-web
+    restart: unless-stopped
+    ports:
+      # Puerto configurable en .env (por defecto 8085 para evitar conflictos con servicios existentes en GCP)
+      - "${PORT:-8085}:80"
+    volumes:
+      # Volumen opcional para permitir colocar APKs reales en la carpeta downloads del host sin reconstruir
+      - ./public/downloads:/usr/share/nginx/html/downloads:ro
+    environment:
+      - NODE_ENV=production

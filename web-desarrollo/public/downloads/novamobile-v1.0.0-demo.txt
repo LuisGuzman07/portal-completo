@@ -1,0 +1,32 @@
+===================================================================
+NovaSoft Solutions — Paquete Demostrativo de Descarga (Capítulo VII)
+===================================================================
+
+Producto: NovaMobile Client
+Versión: 1.0.0-demo
+Tipo: Archivo de verificación de canal de distribución
+Propósito: Validación de la infraestructura de descarga del sitio web corporativo
+
+INSTRUCCIONES PARA DESPLIEGUE DE ARCHIVOS REALES:
+-------------------------------------------------
+1. Para distribuir un archivo APK real, copie el archivo compilado en esta carpeta:
+   public/downloads/novamobile-release.apk
+
+2. Actualice el archivo de configuración:
+   src/config/downloads.js
+
+   Modifique el objeto del producto correspondiente:
+   {
+     id: 'novamobile-apk',
+     fileName: 'novamobile-release.apk',
+     fileSize: '18.4 MB',
+     version: '1.0.0',
+     isAvailable: true,
+     ...
+   }
+
+3. Al reconstruir o desplegar en el contenedor Docker Nginx, el archivo estará
+   disponible inmediatamente para descarga directa a través de:
+   /downloads/novamobile-release.apk
+
+NovaSoft Solutions © 2026. Todos los derechos reservados.
