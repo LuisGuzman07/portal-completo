@@ -105,10 +105,51 @@ class EventoSerializer(serializers.ModelSerializer):
 class EventoPublicoSerializer(serializers.ModelSerializer):
     recursos_multimedia = serializers.SerializerMethodField()
     imagen_url = serializers.SerializerMethodField()
+    latitud = serializers.SerializerMethodField()
+    longitud = serializers.SerializerMethodField()
 
     class Meta:
         model = Evento
-        fields = ['id', 'titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'lugar', 'imagen_url', 'recursos_multimedia']
+        fields = [
+            'id', 'titulo', 'descripcion', 'fecha_inicio', 'fecha_fin',
+            'lugar', 'imagen_url', 'recursos_multimedia', 'latitud', 'longitud',
+        ]
+
+    def get_latitud(self, obj):
+        val = getattr(obj, 'latitud', None)
+        if val is not None:
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                pass
+        if obj.lugar:
+            import re
+            match = re.search(r'(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)', str(obj.lugar))
+            if match:
+                try:
+                    return float(match.group(1))
+                except (ValueError, TypeError):
+                    pass
+        # Sede Central ABOCCRIM (La Paz, Bolivia)
+        return -16.500366
+
+    def get_longitud(self, obj):
+        val = getattr(obj, 'longitud', None)
+        if val is not None:
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                pass
+        if obj.lugar:
+            import re
+            match = re.search(r'(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)', str(obj.lugar))
+            if match:
+                try:
+                    return float(match.group(2))
+                except (ValueError, TypeError):
+                    pass
+        # Sede Central ABOCCRIM (La Paz, Bolivia)
+        return -68.133292
 
     def get_imagen_url(self, obj):
         resources = obj.recursos_publicos if hasattr(obj, 'recursos_publicos') else obj.recursos_multimedia.filter(nivel_acceso='publico')

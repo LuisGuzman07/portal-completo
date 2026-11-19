@@ -985,6 +985,29 @@ class RevisionPublicacionActionView(views.APIView):
             )
         )
 
+        # Disparar Notificación Push al autor registrado
+        try:
+            from apps.common.push_service import enviar_notificacion_push
+            if resultado == 'aprobada':
+                titulo_push = '📖 ¡Tu libro/obra ha sido aprobada!'
+                cuerpo_push = f'Tu publicación "{pub.titulo}" fue aprobada y ya está disponible en el repositorio de ABOCCRIM.'
+            elif resultado == 'observada':
+                titulo_push = '⚠️ Publicación Observada'
+                cuerpo_push = f'Tu obra "{pub.titulo}" requiere ajustes: {observaciones[:100]}'
+            else:
+                titulo_push = '❌ Dictamen de Publicación'
+                cuerpo_push = f'Tu obra "{pub.titulo}" no ha sido aprobada. Motivo: {observaciones[:100]}'
+
+            res = enviar_notificacion_push(
+                usuario_id=pub.registrada_por_id,
+                titulo=titulo_push,
+                cuerpo=cuerpo_push,
+                datos={'tipo': 'publicacion', 'publicacion_id': str(pub.id), 'estado': resultado}
+            )
+            print(f"[PUSH ACTION] Notificación de publicación #{pub.id} enviada: {res}")
+        except Exception as e:
+            print(f"[PUSH ACTION ERROR] Error al enviar notificación: {e}")
+
         return Response({
             'message': f'La publicación ha sido dictaminada exitosamente como "{resultado}".',
             'publicacion': PublicacionDetailSerializer(pub).data,

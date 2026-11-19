@@ -33,7 +33,7 @@ services:
       POSTGRES_PORT: 5432
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-aboccrim-dev-secret-key-change-in-prod-2025}
       DEBUG: ${DEBUG:-True}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,0.0.0.0}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,0.0.0.0,192.168.100.6,*}
       SEED_DEMO_USERS: ${SEED_DEMO_USERS:-true}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-Aboccrim2025!}
       EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}

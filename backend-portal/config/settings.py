@@ -213,3 +213,8 @@ OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2:3b')
 OLLAMA_EMBED_MODEL = os.getenv('OLLAMA_EMBED_MODEL', 'nomic-embed-text')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile')
+
+# ===================================================
+# Firebase Cloud Messaging (Notificaciones Push)
+# ===================================================
+FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH', str(BASE_DIR / 'firebase-key.json'))

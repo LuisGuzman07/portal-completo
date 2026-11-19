@@ -278,6 +278,29 @@ class SolicitudIncorporacionEvaluateView(views.APIView):
             detalle=f'Evaluación #{evaluation.id} registrada por Comité Académico; estado {previous_state} → {next_state}.',
         )
 
+        # Disparar Notificación Push si la solicitud es observada o avanza
+        try:
+            from apps.common.push_service import enviar_notificacion_push
+            from apps.accounts.models import Usuario
+            target_user = application.usuario or Usuario.objects.filter(email__iexact=application.email).first()
+            if target_user:
+                if next_state == 'observada':
+                    tit = '⚠️ Documentación requerida en tu Solicitud'
+                    msg = f'El Comité Académico solicita documentos adicionales: {evaluation.observaciones or "Por favor revise las observaciones en la app."}'
+                else:
+                    tit = '📋 Avance en tu Solicitud de Membresía'
+                    msg = f'Tu solicitud ha avanzado en el proceso (nuevo estado: {next_state}).'
+
+                res = enviar_notificacion_push(
+                    usuario_id=target_user.id,
+                    titulo=tit,
+                    cuerpo=msg[:150],
+                    datos={'tipo': 'incorporacion', 'solicitud_id': str(application.id), 'estado': next_state}
+                )
+                print(f"[PUSH INCORPORATION] Solicitud #{application.id} evaluación -> {res}")
+        except Exception as e:
+            print(f"[PUSH INCORPORATION ERROR] Error al enviar push: {e}")
+
         detail = SolicitudIncorporacionReviewDetailSerializer(
             application, context={'request': request},
         ).data
@@ -399,6 +422,30 @@ class SolicitudIncorporacionDecisionView(views.APIView):
         detail_data = SolicitudIncorporacionReviewDetailSerializer(
             application, context={'request': request}
         ).data
+
+        # Disparar Notificación Push de decisión institucional final
+        try:
+            from apps.common.push_service import enviar_notificacion_push
+            from apps.accounts.models import Usuario
+
+            target_user = application.usuario or Usuario.objects.filter(email__iexact=application.email).first()
+            if target_user:
+                if resultado == 'aprobada':
+                    titulo_push = '🏛️ ¡Felicidades! Membresía ABOCCRIM Aprobada'
+                    cuerpo_push = 'Tu solicitud de incorporación como Miembro de ABOCCRIM ha sido APROBADA oficialmente.'
+                else:
+                    titulo_push = '🏛️ Resolución de Solicitud ABOCCRIM'
+                    cuerpo_push = f'Tu solicitud de membresía fue dictaminada como: {resultado.upper()}. Observaciones: {observaciones[:100]}'
+
+                res = enviar_notificacion_push(
+                    usuario_id=target_user.id,
+                    titulo=titulo_push,
+                    cuerpo=cuerpo_push,
+                    datos={'tipo': 'incorporacion', 'solicitud_id': str(application.id), 'estado': resultado}
+                )
+                print(f"[PUSH INCORPORATION] Solicitud #{application.id} decisión final -> {res}")
+        except Exception as e:
+            print(f"[PUSH INCORPORATION ERROR] Error al enviar push: {e}")
 
         return Response({
             'mensaje': (

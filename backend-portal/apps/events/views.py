@@ -51,6 +51,17 @@ class EventoAdminListCreateView(generics.ListCreateAPIView):
             request=self.request, accion='CREAR_EVENTO', entidad='Evento',
             registro_afectado_id=evento.id, detalle=f'Evento creado: {evento.titulo} (estado={evento.estado}).',
         )
+        if evento.estado == 'publicado':
+            try:
+                from apps.common.push_service import enviar_notificacion_push
+                fecha_str = evento.fecha_inicio.strftime('%d/%m/%Y %H:%M') if evento.fecha_inicio else ''
+                enviar_notificacion_push(
+                    titulo=f'📢 Nuevo Evento: {evento.titulo}',
+                    cuerpo=f'Lugar: {evento.lugar or "Sede ABOCCRIM"} • Fecha: {fecha_str}',
+                    datos={'tipo': 'evento', 'evento_id': str(evento.id)}
+                )
+            except Exception:
+                pass
 
 
 class EventoAdminDetailView(generics.RetrieveUpdateDestroyAPIView):

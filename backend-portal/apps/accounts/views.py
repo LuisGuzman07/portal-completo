@@ -388,3 +388,54 @@ class ResendConfirmationEmailView(views.APIView):
             'message': f'Se ha enviado un nuevo enlace de confirmación a {user.email}. Por favor revise su bandeja de entrada.',
             'correo_enviado': True
         }, status=status.HTTP_200_OK)
+
+
+class DeviceRegistrationView(views.APIView):
+    """
+    Registra o actualiza el token FCM del dispositivo móvil para el usuario autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        fcm_token = request.data.get('fcm_token', '').strip()
+        dispositivo = request.data.get('dispositivo', 'Android')
+
+        if not fcm_token:
+            return Response({'error': 'El fcm_token es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .models import DispositivoFCM
+        dispositivo_obj, created = DispositivoFCM.objects.update_or_create(
+            fcm_token=fcm_token,
+            defaults={
+                'usuario': request.user,
+                'dispositivo': dispositivo
+            }
+        )
+
+        return Response({
+            'message': 'Dispositivo registrado para notificaciones push exitosamente.',
+            'created': created
+        }, status=status.HTTP_200_OK)
+
+
+class TestPushNotificationView(views.APIView):
+    """
+    Dispara una notificación push de bienvenida / prueba al dispositivo del usuario.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from apps.common.push_service import enviar_notificacion_push
+
+        user = request.user
+        resultado = enviar_notificacion_push(
+            usuario_id=user.id,
+            titulo='¡Bienvenido a ABOCCRIM!',
+            cuerpo=f'Hola {user.nombres}, tu dispositivo está configurado para recibir notificaciones.',
+            datos={'tipo': 'prueba', 'usuario_id': str(user.id)}
+        )
+
+        return Response({
+            'message': 'Petición de notificación procesada.',
+            'detalle': resultado
+        }, status=status.HTTP_200_OK)

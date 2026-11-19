@@ -109,3 +109,19 @@ class Usuario(AbstractBaseUser):
 
     def __str__(self):
         return f"{self.get_full_name()} <{self.email}>"
+
+
+class DispositivoFCM(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='dispositivos_fcm')
+    fcm_token = models.CharField(max_length=255, unique=True)
+    dispositivo = models.CharField(max_length=100, blank=True, default='')
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    ultimo_uso = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'dispositivo_fcm'
+        verbose_name = 'Dispositivo FCM'
+        verbose_name_plural = 'Dispositivos FCM'
+
+    def __str__(self):
+        return f"{self.usuario.email} ({self.dispositivo})"

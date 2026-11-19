@@ -9,7 +9,9 @@ from .views import (
     ResendConfirmationEmailView,
     UsuarioListCreateView,
     UsuarioDetailView,
-    AssignRolesView
+    AssignRolesView,
+    DeviceRegistrationView,
+    TestPushNotificationView
 )
 
 urlpatterns = [
@@ -21,6 +23,8 @@ urlpatterns = [
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('auth/me/', CurrentUserView.as_view(), name='auth-me'),
+    path('auth/devices/', DeviceRegistrationView.as_view(), name='auth-device-register'),
+    path('auth/test-notification/', TestPushNotificationView.as_view(), name='auth-test-notification'),
 
     # Users management
     path('users/', UsuarioListCreateView.as_view(), name='user-list-create'),
