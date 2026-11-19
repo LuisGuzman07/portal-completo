@@ -53,8 +53,10 @@ class LLMService:
             try:
                 import requests
                 full_prompt = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
+                headers = {'ngrok-skip-browser-warning': 'true', 'User-Agent': 'ABOCCRIM-AI'}
                 resp = requests.post(
                     f"{base_url}/api/generate",
+                    headers=headers,
                     json={
                         "model": model_name,
                         "prompt": full_prompt,

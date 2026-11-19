@@ -39,8 +39,10 @@ def _get_ollama_embedding(text: str) -> list[float] | None:
     model = getattr(settings, 'OLLAMA_EMBED_MODEL', 'nomic-embed-text')
     try:
         import requests
+        headers = {'ngrok-skip-browser-warning': 'true', 'User-Agent': 'ABOCCRIM-AI'}
         resp = requests.post(
             f"{base_url}/api/embeddings",
+            headers=headers,
             json={"model": model, "prompt": text},
             timeout=60,
         )
