@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from django.urls import reverse
 
-from .models import DocumentoSolicitud, EvaluacionSolicitud, SolicitudIncorporacion
+from .models import DecisionIncorporacion, DocumentoSolicitud, EvaluacionSolicitud, SolicitudIncorporacion
 from .storage import (
     MAX_REQUEST_FILES_SIZE,
     MAX_SUPPORTING_FILES,
@@ -159,20 +159,72 @@ class SolicitudIncorporacionReviewListSerializer(serializers.ModelSerializer):
         return len(obj.evaluaciones.all())
 
 
+class DecisionIncorporacionSerializer(serializers.ModelSerializer):
+    registrada_por_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DecisionIncorporacion
+        fields = [
+            'id',
+            'resultado',
+            'referencia_acta',
+            'fecha_decision',
+            'observaciones',
+            'registrada_por_nombre',
+        ]
+
+    def get_registrada_por_nombre(self, obj):
+        if not obj.registrada_por:
+            return '—'
+        return f'{obj.registrada_por.nombres} {obj.registrada_por.apellidos}'.strip() or obj.registrada_por.email
+
+
 class SolicitudIncorporacionReviewDetailSerializer(serializers.ModelSerializer):
     codigo = serializers.SerializerMethodField()
     documentos = DocumentoSolicitudReviewSerializer(many=True, read_only=True)
     evaluaciones = EvaluacionSolicitudSerializer(many=True, read_only=True)
+    decision = DecisionIncorporacionSerializer(source='decision_incorporacion', read_only=True)
+    categoria_miembro_nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = SolicitudIncorporacion
         fields = [
             'id', 'codigo', 'nombres', 'apellidos', 'email', 'telefono',
-            'antecedentes_academicos', 'estado', 'fecha_envio', 'documentos', 'evaluaciones',
+            'antecedentes_academicos', 'estado', 'fecha_envio', 'documentos',
+            'evaluaciones', 'decision', 'categoria_miembro_nombre',
         ]
 
     def get_codigo(self, obj):
         return f'ABO-SOL-{obj.id:06d}'
+
+    def get_categoria_miembro_nombre(self, obj):
+        from apps.academics.models import Miembro
+        miembro = Miembro.objects.filter(solicitud_id=obj.id).select_related('categoria').first()
+        return miembro.categoria.nombre if miembro and miembro.categoria else None
+
+
+class DecisionIncorporacionCreateSerializer(serializers.Serializer):
+    RESULTADOS = [
+        ('aprobada', 'Aprobar incorporación'),
+        ('rechazada', 'Rechazar solicitud'),
+    ]
+    resultado = serializers.ChoiceField(choices=RESULTADOS)
+    referencia_acta = serializers.CharField(max_length=150, required=False, allow_blank=True, allow_null=True)
+    observaciones = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    categoria_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_referencia_acta(self, value):
+        return value.strip() if value else ''
+
+    def validate_observaciones(self, value):
+        return value.strip() if value else ''
+
+    def validate(self, attrs):
+        if attrs.get('resultado') == 'rechazada' and not attrs.get('observaciones'):
+            raise serializers.ValidationError({
+                'observaciones': 'Debe ingresar los fundamentos o consideraciones institucionales del rechazo.'
+            })
+        return attrs
 
 
 class EvaluacionSolicitudCreateSerializer(serializers.ModelSerializer):

@@ -5,6 +5,8 @@ from pathlib import Path
 from django.conf import settings
 from rest_framework import serializers
 
+from apps.common.storage_service import storage_service
+
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 MAX_REQUEST_FILES_SIZE = 25 * 1024 * 1024
@@ -25,21 +27,17 @@ def validate_pdf(upload, field_name):
 
 
 def save_application_file(upload, application_id):
-    media_root = Path(settings.MEDIA_ROOT).resolve()
-    folder = media_root / 'solicitudes_incorporacion' / str(application_id)
-    folder.mkdir(parents=True, exist_ok=True)
     filename = f'{uuid.uuid4().hex}.pdf'
     relative_path = f'solicitudes_incorporacion/{application_id}/{filename}'
-    target = (media_root / relative_path).resolve()
-    if (media_root / 'solicitudes_incorporacion').resolve() not in target.parents:
-        raise serializers.ValidationError('No se pudo almacenar el documento de la solicitud.')
 
     upload.seek(0)
     try:
-        with open(target, 'wb') as destination:
-            for chunk in upload.chunks():
-                destination.write(chunk)
-    except OSError as error:
+        storage_service.upload_file(
+            file_obj=upload,
+            relative_path=relative_path,
+            content_type='application/pdf'
+        )
+    except Exception as error:
         raise serializers.ValidationError('No se pudo guardar el documento en el almacenamiento.') from error
     return relative_path
 
@@ -47,11 +45,7 @@ def save_application_file(upload, application_id):
 def remove_application_file(relative_path):
     if not relative_path:
         return
-    media_root = Path(settings.MEDIA_ROOT).resolve()
-    applications_root = (media_root / 'solicitudes_incorporacion').resolve()
-    target = (media_root / relative_path).resolve()
-    if applications_root in target.parents and target.is_file():
-        try:
-            target.unlink()
-        except OSError:
-            pass
+    try:
+        storage_service.delete_file(relative_path)
+    except Exception:
+        pass

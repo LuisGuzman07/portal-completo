@@ -105,15 +105,26 @@ export default function RepositorioAcademicoPage() {
             Consulte investigaciones arbitradas, dictámenes técnicos, monografías y artículos especializados avalados por la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).
           </p>
 
-          <div className="pt-2 flex flex-wrap gap-2 text-xs">
-            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-semibold flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">verified</span>
-              <span>Arbitraje Científico Editorial</span>
-            </span>
-            <span className="px-3 py-1 rounded-full bg-secondary/10 text-secondary font-semibold flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">lock_open</span>
-              <span>Acceso Abierto a la Evidencia</span>
-            </span>
+          <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-semibold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">verified</span>
+                <span>Arbitraje Científico Editorial</span>
+              </span>
+              <span className="px-3 py-1 rounded-full bg-secondary/10 text-secondary font-semibold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">lock_open</span>
+                <span>Acceso Abierto a la Evidencia</span>
+              </span>
+            </div>
+
+            <Link
+              to="/asistente-academico"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary text-on-primary hover:bg-primary/90 text-xs font-bold transition-all shadow-xs"
+            >
+              <span className="material-symbols-outlined text-base">smart_toy</span>
+              <span>Consultar con el Asistente Académico IA</span>
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </Link>
           </div>
         </div>
       </section>

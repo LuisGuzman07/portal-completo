@@ -30,6 +30,7 @@ export const NAV_CONFIG = [
     items: [
       { label: 'Investigadores', path: '/investigadores', available: true, icon: 'groups' },
       { label: 'Líneas de investigación', path: '/institucional?seccion=investigacion', available: true, icon: 'science' },
+      { label: 'Asistente Académico IA', path: '/asistente-academico', available: true, icon: 'smart_toy' },
     ],
   },
   {
@@ -142,6 +143,25 @@ export default function Header() {
     });
   };
 
+  const resolveSubItem = (sub) => {
+    if (sub.path === '/solicitud-incorporacion') {
+      if (isAuthenticated) {
+        const isMember = user?.roles_codigos?.includes('miembro');
+        return {
+          ...sub,
+          path: '/dashboard/solicitud-membresia',
+          label: isMember ? 'Mi Membresía Institucional' : 'Postular a membresía',
+          icon: isMember ? 'verified' : 'person_add',
+        };
+      }
+      return {
+        ...sub,
+        path: '/solicitud-incorporacion',
+      };
+    }
+    return sub;
+  };
+
   const isSubActive = (subPath) => {
     const currentFull = location.pathname + location.search;
     if (subPath.includes('?')) {
@@ -251,10 +271,11 @@ export default function Header() {
                       </div>
 
                       <div className="flex flex-col gap-0.5">
-                        {item.items.map((sub) =>
-                          sub.available ? (
+                        {item.items.map((rawSub) => {
+                          const sub = resolveSubItem(rawSub);
+                          return sub.available ? (
                             <Link
-                              key={sub.label}
+                              key={rawSub.label}
                               to={sub.path}
                               role="menuitem"
                               onClick={() => setActiveDropdown(null)}
@@ -276,7 +297,7 @@ export default function Header() {
                             </Link>
                           ) : (
                             <div
-                              key={sub.label}
+                              key={rawSub.label}
                               role="menuitem"
                               aria-disabled="true"
                               className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-outline/60 cursor-not-allowed select-none"
@@ -284,14 +305,14 @@ export default function Header() {
                             >
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-outline/40">›</span>
-                                <span>{sub.label}</span>
+                                <span>{rawSub.label}</span>
                               </div>
                               <span className="text-[10px] font-semibold tracking-wide px-1.5 py-0.5 rounded bg-surface-container text-outline/70">
                                 Próximamente
                               </span>
                             </div>
-                          )
-                        )}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -430,10 +451,11 @@ export default function Header() {
 
                 {isExpanded && (
                   <div className="p-2 space-y-1 bg-surface-container-lowest border-t border-outline-variant/15">
-                    {cat.items.map((sub) =>
-                      sub.available ? (
+                    {cat.items.map((rawSub) => {
+                      const sub = resolveSubItem(rawSub);
+                      return sub.available ? (
                         <Link
-                          key={sub.label}
+                          key={rawSub.label}
                           to={sub.path}
                           onClick={() => setMobileMenuOpen(false)}
                           className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
@@ -454,19 +476,19 @@ export default function Header() {
                         </Link>
                       ) : (
                         <div
-                          key={sub.label}
+                          key={rawSub.label}
                           className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-outline/50 cursor-not-allowed select-none"
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-outline/40">›</span>
-                            <span>{sub.label}</span>
+                            <span>{rawSub.label}</span>
                           </div>
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-outline/70">
                             Próximamente
                           </span>
                         </div>
-                      )
-                    )}
+                      );
+                    })}
                   </div>
                 )}
               </div>

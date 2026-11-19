@@ -15,6 +15,7 @@ from rest_framework.response import Response
 
 from apps.academics.models import AreaTematica, Investigador, Miembro
 from apps.audit.models import registrar_auditoria
+from apps.common.storage_service import storage_service
 from .models import (
     Autor,
     Categoria,
@@ -114,21 +115,17 @@ def validate_and_save_pdf(file_obj, publicacion_id):
         sha256.update(chunk)
     checksum = sha256.hexdigest()
 
-    # Directorio persistente
-    media_root = Path(settings.MEDIA_ROOT)
-    pub_dir = media_root / 'publicaciones' / str(publicacion_id)
-    pub_dir.mkdir(parents=True, exist_ok=True)
-
     safe_filename = f'{uuid.uuid4().hex}.pdf'
-    full_path = pub_dir / safe_filename
-
-    # Guardar en disco
-    file_obj.seek(0)
-    with open(full_path, 'wb+') as destination:
-        for chunk in file_obj.chunks():
-            destination.write(chunk)
-
     rel_path = f'publicaciones/{publicacion_id}/{safe_filename}'
+
+    # Guardar en almacenamiento MinIO / local
+    file_obj.seek(0)
+    storage_service.upload_file(
+        file_obj=file_obj,
+        relative_path=rel_path,
+        content_type='application/pdf'
+    )
+
     return {
         'ruta_privada': rel_path,
         'nombre_original': os.path.basename(filename),
@@ -139,17 +136,13 @@ def validate_and_save_pdf(file_obj, publicacion_id):
 
 
 def delete_physical_file(ruta_privada):
-    """Elimina el archivo físico del almacenamiento si existe, evitando path traversal."""
+    """Elimina el archivo del almacenamiento si existe."""
     if not ruta_privada:
         return
-    media_root = Path(settings.MEDIA_ROOT).resolve()
-    target_path = (media_root / ruta_privada).resolve()
     try:
-        # Verificar que el path esté dentro de MEDIA_ROOT
-        if media_root in target_path.parents and target_path.is_file():
-            target_path.unlink()
+        storage_service.delete_file(ruta_privada)
     except Exception as e:
-        print(f'Error al eliminar archivo físico {target_path}: {e}')
+        print(f'Error al eliminar archivo {ruta_privada}: {e}')
 
 
 def ensure_catalogs_seeded():
@@ -1035,6 +1028,13 @@ class DocumentoDigitalDownloadView(views.APIView):
         pub = doc.publicacion
         user = request.user
 
+        # Regla 0: Requiere inicio de sesión (rol de usuario o superior) para previsualizar o descargar
+        if not (user and user.is_authenticated):
+            return Response(
+                {'detail': 'Para previsualizar o descargar este documento académico debe iniciar sesión en el portal.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         has_review_privileges = user_has_review_privileges(user)
         is_author = publication_is_owned_by(user, pub)
 
@@ -1059,29 +1059,11 @@ class DocumentoDigitalDownloadView(views.APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
         elif nivel == 'miembros':
-            is_member = bool(
-                has_review_privileges
-                or (
-                    user and user.is_authenticated and (
-                        Miembro.objects.filter(usuario_id=user.id, estado='activo').exists()
-                        or Investigador.objects.filter(
-                            perfil_academico__usuario_id=user.id,
-                            estado='activo',
-                        ).exists()
-                    )
-                )
-            )
-            if not is_member and not is_author:
-                return Response(
-                    {'detail': 'Este documento es exclusivo para miembros e investigadores acreditados de ABOCCRIM. Inicie sesión.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            # Por ahora, con tener sesión iniciada (rol de usuario o superior) es suficiente
+            pass
 
-        # Regla 3: Comprobar existencia física del archivo
-        media_root = Path(settings.MEDIA_ROOT).resolve()
-        file_path = (media_root / doc.ruta_privada).resolve()
-
-        if not (media_root in file_path.parents and file_path.is_file()):
+        # Regla 3: Comprobar existencia del archivo en el almacenamiento (MinIO / local)
+        if not storage_service.file_exists(doc.ruta_privada):
             return Response(
                 {'detail': 'El archivo físico no se encuentra disponible en el almacenamiento del servidor.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -1109,9 +1091,10 @@ class DocumentoDigitalDownloadView(views.APIView):
         )
 
         inline = request.query_params.get('inline') in ('true', '1')
-        response = FileResponse(open(file_path, 'rb'), content_type=doc.mime or 'application/pdf')
-        disposition = 'inline' if inline else 'attachment'
-        # Limpieza de nombre para Content-Disposition
         safe_filename = doc.nombre_original.replace('"', '').replace('\r', '').replace('\n', '')
-        response['Content-Disposition'] = f'{disposition}; filename="{safe_filename}"'
-        return response
+        return storage_service.stream_file_response(
+            relative_path=doc.ruta_privada,
+            filename=safe_filename,
+            content_type=doc.mime or 'application/pdf',
+            inline=inline
+        )

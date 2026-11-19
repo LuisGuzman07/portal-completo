@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -15,6 +15,7 @@ import RepositorioAcademicoPage from './pages/public/RepositorioAcademicoPage';
 import PublicacionDetailPage from './pages/public/PublicacionDetailPage';
 import AccesoMiembrosPage from './pages/auth/AccesoMiembrosPage';
 import ConfirmarCuentaPage from './pages/auth/ConfirmarCuentaPage';
+import AsistenteAcademicoPage from './pages/academic/AsistenteAcademicoPage';
 
 // Admin Pages
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -36,15 +37,19 @@ import AdminConveniosPage from './pages/institutional/AdminConveniosPage';
 import ConveniosPage from './pages/public/ConveniosPage';
 import SolicitudIncorporacionPage from './pages/public/SolicitudIncorporacionPage';
 import EvaluarSolicitudesPage from './pages/academic/EvaluarSolicitudesPage';
+import MiSolicitudMembresiaPage from './pages/academic/MiSolicitudMembresiaPage';
 
 function PublicLayout() {
+  const location = useLocation();
+  const isAIAssistant = location.pathname.startsWith('/asistente-academico');
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-on-surface">
       <Header />
-      <main className="w-full pt-20 bg-background min-h-screen flex flex-col flex-1">
+      <main className={`w-full pt-20 bg-background flex flex-col flex-1 ${isAIAssistant ? 'h-[calc(100vh-80px)] overflow-hidden' : 'min-h-screen'}`}>
         <Outlet />
       </main>
-      <Footer />
+      {!isAIAssistant && <Footer />}
     </div>
   );
 }
@@ -61,6 +66,7 @@ export default function App() {
           <Route path="/investigadores/:id" element={<InvestigadorDetailPage />} />
           <Route path="/repositorio" element={<RepositorioAcademicoPage />} />
           <Route path="/repositorio/:id" element={<PublicacionDetailPage />} />
+          <Route path="/asistente-academico" element={<AsistenteAcademicoPage />} />
           <Route path="/eventos" element={<EventosPage />} />
           <Route path="/noticias" element={<NoticiasPage />} />
           <Route path="/multimedia" element={<MultimediaPage />} />
@@ -80,6 +86,7 @@ export default function App() {
           }
         >
           <Route index element={<AdminDashboardPage />} />
+          <Route path="solicitud-membresia" element={<MiSolicitudMembresiaPage />} />
           <Route path="perfil-academico" element={<AcademicProfilePage />} />
           <Route path="publicaciones" element={<AdminPublicacionesPage />} />
           <Route path="revisiones" element={<RevisionPublicacionesPage />} />

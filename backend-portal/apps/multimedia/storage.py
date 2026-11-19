@@ -5,6 +5,8 @@ from pathlib import Path
 from django.conf import settings
 from rest_framework import serializers
 
+from apps.common.storage_service import storage_service
+
 
 MAX_MULTIMEDIA_SIZE = 50 * 1024 * 1024
 
@@ -44,21 +46,17 @@ def save_multimedia_file(upload):
     if not signature_check(header):
         raise serializers.ValidationError({'archivo': 'El contenido del archivo no coincide con su extensión.'})
 
-    media_root = Path(settings.MEDIA_ROOT)
-    directory = media_root / 'multimedia'
-    directory.mkdir(parents=True, exist_ok=True)
     safe_name = f'{uuid.uuid4().hex}{extension}'
     relative_path = f'multimedia/{safe_name}'
-    full_path = (media_root / relative_path).resolve()
-    if media_root.resolve() not in full_path.parents:
-        raise serializers.ValidationError({'archivo': 'No se pudo almacenar el archivo.'})
 
     upload.seek(0)
     try:
-        with open(full_path, 'wb') as destination:
-            for chunk in upload.chunks():
-                destination.write(chunk)
-    except OSError as error:
+        storage_service.upload_file(
+            file_obj=upload,
+            relative_path=relative_path,
+            content_type=CONTENT_TYPES.get(extension)
+        )
+    except Exception as error:
         raise serializers.ValidationError({'archivo': 'No se pudo guardar el archivo en el almacenamiento.'}) from error
 
     return relative_path, extension.lstrip('.')
@@ -67,13 +65,10 @@ def save_multimedia_file(upload):
 def remove_multimedia_file(relative_path):
     if not relative_path or relative_path.startswith(('http://', 'https://')):
         return
-    media_root = Path(settings.MEDIA_ROOT).resolve()
-    file_path = (media_root / relative_path).resolve()
-    if media_root in file_path.parents and file_path.is_file():
-        try:
-            file_path.unlink()
-        except OSError:
-            pass
+    try:
+        storage_service.delete_file(relative_path)
+    except Exception:
+        pass
 
 
 def multimedia_content_type(resource):

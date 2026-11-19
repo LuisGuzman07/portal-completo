@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from rest_framework import generics
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from apps.audit.models import registrar_auditoria
@@ -31,6 +32,7 @@ class NoticiaPublicaListView(generics.ListAPIView):
 class NoticiaAdminListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, CanManageNews]
     serializer_class = NoticiaSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         queryset = Noticia.objects.prefetch_related('recursos_multimedia')
@@ -52,10 +54,11 @@ class NoticiaAdminListCreateView(generics.ListCreateAPIView):
         )
 
 
-class NoticiaAdminDetailView(generics.RetrieveUpdateAPIView):
+class NoticiaAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, CanManageNews]
     queryset = Noticia.objects.prefetch_related('recursos_multimedia')
     serializer_class = NoticiaSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -64,4 +67,20 @@ class NoticiaAdminDetailView(generics.RetrieveUpdateAPIView):
             request=self.request, accion='ACTUALIZAR_NOTICIA', entidad='Noticia',
             registro_afectado_id=noticia.id,
             detalle=f'Noticia actualizada: {noticia.titulo} (estado={noticia.estado}).',
+        )
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        titulo = instance.titulo
+        noticia_id = instance.id
+        from apps.multimedia.storage import remove_multimedia_file
+        for res in instance.recursos_multimedia.all():
+            if not res.ruta_o_url.lower().startswith(('http://', 'https://')):
+                remove_multimedia_file(res.ruta_o_url)
+            res.delete()
+        instance.delete()
+        registrar_auditoria(
+            request=self.request, accion='ELIMINAR_NOTICIA', entidad='Noticia',
+            registro_afectado_id=noticia_id,
+            detalle=f'Noticia eliminada: {titulo}.',
         )

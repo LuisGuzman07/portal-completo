@@ -108,6 +108,24 @@ export default function DashboardLayout() {
               <span>Gestión de Publicaciones</span>
             </Link>
 
+            <Link to="/asistente-academico" onClick={() => setSidebarOpen(false)} className={navItemClass('/asistente-academico')}>
+              <span className="material-symbols-outlined text-xl">smart_toy</span>
+              <span>Asistente Académico IA</span>
+            </Link>
+
+            {/* Solicitud / Acreditación de Membresía: disponible para postulantes (usuarios/investigadores) y miembros */}
+            {user?.roles_codigos?.includes('miembro') ? (
+              <Link to="/dashboard/solicitud-membresia" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/solicitud-membresia')}>
+                <span className="material-symbols-outlined text-xl">verified</span>
+                <span>Mi Membresía Institucional</span>
+              </Link>
+            ) : (
+              <Link to="/dashboard/solicitud-membresia" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/solicitud-membresia')}>
+                <span className="material-symbols-outlined text-xl">card_membership</span>
+                <span>Solicitud de Membresía</span>
+              </Link>
+            )}
+
             {(isSuperAdmin || isAdminAcademico || user?.roles_codigos?.includes('comite_academico')) && (
               <Link to="/dashboard/revisiones" onClick={() => setSidebarOpen(false)} className={navItemClass('/dashboard/revisiones')}>
                 <span className="material-symbols-outlined text-xl">rate_review</span>

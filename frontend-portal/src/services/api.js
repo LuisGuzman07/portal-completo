@@ -316,8 +316,15 @@ export const eventService = {
     const query = new URLSearchParams(params).toString();
     return apiRequest(`/events/${query ? `?${query}` : ''}`);
   },
-  create: (data) => apiRequest('/events/', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id, data) => apiRequest(`/events/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+  create: (data) => apiRequest('/events/', {
+    method: 'POST',
+    body: data instanceof FormData ? data : JSON.stringify(data),
+  }),
+  update: (id, data) => apiRequest(`/events/${id}/`, {
+    method: 'PATCH',
+    body: data instanceof FormData ? data : JSON.stringify(data),
+  }),
+  delete: (id) => apiRequest(`/events/${id}/`, { method: 'DELETE' }),
 };
 
 export const newsService = {
@@ -329,8 +336,15 @@ export const newsService = {
     const query = new URLSearchParams(params).toString();
     return apiRequest(`/news/${query ? `?${query}` : ''}`);
   },
-  create: (data) => apiRequest('/news/', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id, data) => apiRequest(`/news/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+  create: (data) => apiRequest('/news/', {
+    method: 'POST',
+    body: data instanceof FormData ? data : JSON.stringify(data),
+  }),
+  update: (id, data) => apiRequest(`/news/${id}/`, {
+    method: 'PATCH',
+    body: data instanceof FormData ? data : JSON.stringify(data),
+  }),
+  delete: (id) => apiRequest(`/news/${id}/`, { method: 'DELETE' }),
 };
 
 export const multimediaService = {
@@ -348,6 +362,7 @@ export const multimediaService = {
   update: (id, data) => apiRequest(`/multimedia/${id}/`, {
     method: 'PATCH', body: data instanceof FormData ? data : JSON.stringify(data)
   }),
+  delete: (id) => apiRequest(`/multimedia/${id}/`, { method: 'DELETE' }),
   download: async (id, filename = 'recurso-multimedia') => {
     const token = localStorage.getItem('aboccrim_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -406,6 +421,34 @@ export const agreementService = {
 };
 
 export const incorporationService = {
+  // Panel de control (Usuario autenticado)
+  getMyApplication: () => apiRequest('/incorporacion/mi-solicitud/'),
+  submitMyApplication: (data) => apiRequest('/incorporacion/mi-solicitud/', {
+    method: 'POST', body: data,
+  }),
+  submitMySupportingDocuments: (data) => apiRequest('/incorporacion/mi-solicitud/documentos/', {
+    method: 'POST', body: data,
+  }),
+  downloadMyDocument: async (documentId, filename = 'documento.pdf') => {
+    const token = localStorage.getItem('aboccrim_token');
+    const response = await fetch(`${API_BASE_URL}/incorporacion/mi-solicitud/documentos/${documentId}/download/`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'No se pudo descargar el documento.');
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  },
+
+  // Flujo público y seguimiento
   submit: (data) => apiRequest('/incorporacion/solicitudes/', {
     method: 'POST', body: data, skipAuth: true,
   }),
@@ -421,6 +464,9 @@ export const incorporationService = {
   },
   reviewDetail: (id) => apiRequest(`/incorporacion/solicitudes/${id}/revision/`),
   evaluate: (id, data) => apiRequest(`/incorporacion/solicitudes/${id}/evaluaciones/`, {
+    method: 'POST', body: JSON.stringify(data),
+  }),
+  registerDecision: (id, data) => apiRequest(`/incorporacion/solicitudes/${id}/decision/`, {
     method: 'POST', body: JSON.stringify(data),
   }),
   downloadSupportingDocument: async (applicationId, documentId, filename = 'documento.pdf') => {
@@ -451,4 +497,38 @@ export const repositoryService = {
   },
   get: (id) => apiRequest(`/repository/${id}/`),
 };
+
+export const aiAssistantService = {
+  listConversations: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/ai/conversaciones/${query ? `?${query}` : ''}`);
+  },
+  createConversation: (data = {}) =>
+    apiRequest('/ai/conversaciones/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getConversation: (id) => apiRequest(`/ai/conversaciones/${id}/`),
+  updateConversation: (id, data) =>
+    apiRequest(`/ai/conversaciones/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteConversation: (id) =>
+    apiRequest(`/ai/conversaciones/${id}/`, {
+      method: 'DELETE',
+    }),
+  sendQuery: (data) =>
+    apiRequest('/ai/consultar/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  feedbackMessage: (id, data) =>
+    apiRequest(`/ai/mensajes/${id}/feedback/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getIndexationStatus: () => apiRequest('/ai/indexacion/estado/'),
+};
+
 

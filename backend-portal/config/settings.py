@@ -36,6 +36,7 @@ INSTALLED_APPS = [
       'apps.news',
       'apps.agreements',
       'apps.incorporation',
+      'apps.ai_assistant',
 ]
 
 MIDDLEWARE = [
@@ -123,6 +124,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400   # 25 MB
 
+# ===================================================
+# Configuración de Almacenamiento MinIO / S3 / GCP GCS
+# ===================================================
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'http://minio:9000')
+MINIO_PUBLIC_ENDPOINT = os.getenv('MINIO_PUBLIC_ENDPOINT', 'http://localhost:9000')
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin123')
+MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'aboccrim-media')
+MINIO_SECURE = os.getenv('MINIO_SECURE', 'False').lower() in ('true', '1', 'yes')
+MINIO_ENABLED = os.getenv('MINIO_ENABLED', 'True').lower() in ('true', '1', 'yes')
+
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
@@ -173,3 +186,28 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'soporte.aboccrim@gmail.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'gqsfratfbpztfjck')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'soporte.aboccrim@gmail.com')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
+# Orígenes confiables para CSRF en producción (Vercel / Local)
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://*.vercel.app,http://localhost:5173,http://127.0.0.1:5173'
+    ).split(',') if origin.strip()
+]
+if FRONTEND_URL and FRONTEND_URL not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
+
+# ===================================================
+# Asistente Académico IA & Google Gemini (CU28)
+# ===================================================
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GCP_PROJECT_ID = os.getenv('GCP_PROJECT_ID', '')
+GCP_LOCATION = os.getenv('GCP_LOCATION', 'us-central1')
+LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'gemini_api')
+EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'text-embedding-004')
+GENERATIVE_MODEL = os.getenv('GENERATIVE_MODEL', 'gemini-1.5-flash')
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://ollama:11434')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2:3b')
+OLLAMA_EMBED_MODEL = os.getenv('OLLAMA_EMBED_MODEL', 'nomic-embed-text')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile')

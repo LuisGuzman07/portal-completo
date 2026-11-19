@@ -1,6 +1,65 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { publicationService } from '../../services/api';
+
+export const AREAS_TEMATICAS_TAXONOMIA = [
+  {
+    numero: 1,
+    nombre: '1. Criminología',
+    titulo: 'Criminología',
+    icono: 'psychology',
+    descripcion: 'Estudio interdisciplinario de las conductas antisociales, etiología del delito y control social.',
+    subareas: ['Criminología Clínica', 'Criminología Crítica', 'Criminología Ambiental', 'Criminología Corporativa'],
+  },
+  {
+    numero: 2,
+    nombre: '2. Criminalística',
+    titulo: 'Criminalística',
+    icono: 'search_insights',
+    descripcion: 'Aplicación de métodos y técnicas de investigación científica del hecho delictivo y sus indicios materiales.',
+    subareas: ['Escena del Crimen', 'Balística Forense', 'Documentología', 'Huellas y Lofoscopia'],
+  },
+  {
+    numero: 3,
+    nombre: '3. Ciencias Forenses',
+    titulo: 'Ciencias Forenses',
+    icono: 'biotech',
+    descripcion: 'Disciplinas biomédicas y científicas orientadas al auxilio pericial de la administración de justicia.',
+    subareas: ['Medicina Legal', 'Psicología Forense', 'Antropología Forense', 'Genética Forense / ADN'],
+  },
+  {
+    numero: 4,
+    nombre: '4. Victimología',
+    titulo: 'Victimología',
+    icono: 'support_agent',
+    descripcion: 'Atención integral, mitigación del daño y estudio científico de los procesos de victimización.',
+    subareas: ['Atención a Víctimas', 'Reparación Integral', 'Victimización Secundaria', 'Restitución de Derechos'],
+  },
+  {
+    numero: 5,
+    nombre: '5. Sistema Penal',
+    titulo: 'Sistema Penal',
+    icono: 'balance',
+    descripcion: 'Dogmática jurídica penal, garantías procesales y gestión de los regímenes de ejecución penitenciaria.',
+    subareas: ['Política Criminal', 'Proceso Penal', 'Ejecución Penal', 'Justicia Restaurativa'],
+  },
+  {
+    numero: 6,
+    nombre: '6. Seguridad',
+    titulo: 'Seguridad',
+    icono: 'local_police',
+    descripcion: 'Estrategias de prevención situacional, seguridad pública, penitenciaria y gobernanza institucional.',
+    subareas: ['Seguridad Ciudadana', 'Seguridad Penitenciaria', 'Seguridad Institucional', 'Análisis Delictual'],
+  },
+  {
+    numero: 7,
+    nombre: '7. Violencia, Conflicto y Vulnerabilidad',
+    titulo: 'Violencia, Conflicto y Vulnerabilidad',
+    icono: 'group_remove',
+    descripcion: 'Fenomenología de la violencia interpersonal, colectiva y estructural en grupos en situación de vulnerabilidad.',
+    subareas: ['Violencia de Género', 'Violencia contra la Niñez', 'Trata y Tráfico Ilícito', 'Violencia Social e Interpersonal'],
+  },
+];
 
 const EMPTY_PUB_FORM = {
   titulo: '',
@@ -61,6 +120,15 @@ export default function AdminPublicacionesPage() {
   const [docTypes, setDocTypes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [investigators, setInvestigators] = useState([]);
+  const [areasList, setAreasList] = useState([]);
+
+  // Estados para Categorías / Áreas y Personalizadas
+  const [categorySearch, setCategorySearch] = useState('');
+  const [activeAreaTab, setActiveAreaTab] = useState('todas');
+  const [customCatName, setCustomCatName] = useState('');
+  const [customCatAreaId, setCustomCatAreaId] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [customCatFeedback, setCustomCatFeedback] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -105,8 +173,85 @@ export default function AdminPublicacionesPage() {
       setDocTypes(dtList || []);
       setCategories(cList || []);
       setInvestigators(invList || []);
+
+      // Extraer áreas únicas de las categorías
+      const areasMap = new Map();
+      (cList || []).forEach((c) => {
+        if (c.area && c.area_nombre && !areasMap.has(c.area)) {
+          areasMap.set(c.area, { id: c.area, nombre: c.area_nombre });
+        }
+      });
+      const derivedAreas = Array.from(areasMap.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+      setAreasList(derivedAreas);
+      if (derivedAreas.length > 0) {
+        setCustomCatAreaId(derivedAreas[0].id);
+      }
     } catch (err) {
       console.error('Error cargando catálogos:', err);
+    }
+  };
+
+  // Alternar selección de categoría con checkbox
+  const handleToggleCategory = (catId) => {
+    setPubForm((prev) => {
+      const isChecked = prev.categoria_ids.includes(catId);
+      const next = isChecked
+        ? prev.categoria_ids.filter((id) => id !== catId)
+        : [...prev.categoria_ids, catId];
+      return { ...prev, categoria_ids: next };
+    });
+  };
+
+  // Crear categoría manual / específica
+  const handleCreateCustomCategory = async () => {
+    const name = customCatName.trim();
+    if (!name) return;
+
+    // Verificar si ya existe en categorías cargadas
+    const existing = categories.find((c) => c.nombre.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (!pubForm.categoria_ids.includes(existing.id)) {
+        handleToggleCategory(existing.id);
+      }
+      setCustomCatFeedback(`La categoría "${existing.nombre}" ya existe y ha sido marcada.`);
+      setCustomCatName('');
+      setTimeout(() => setCustomCatFeedback(''), 4500);
+      return;
+    }
+
+    setCreatingCategory(true);
+    setCustomCatFeedback('');
+    try {
+      const areaIdToUse = customCatAreaId || areasList[0]?.id || 2;
+      const created = await publicationService.createCategory({
+        area: areaIdToUse,
+        nombre: name,
+        descripcion: `Categoría institucional específica: ${name}`,
+      });
+
+      if (created && created.id) {
+        setCategories((prev) => [...prev, created]);
+        setPubForm((prev) => ({
+          ...prev,
+          categoria_ids: [...prev.categoria_ids, created.id],
+          palabras_clave: prev.palabras_clave
+            ? `${prev.palabras_clave}, ${name}`
+            : name,
+        }));
+        setCustomCatFeedback(`Categoría "${created.nombre}" registrada y seleccionada exitosamente.`);
+      }
+    } catch (err) {
+      console.warn('Registro API falló o restringido, indexando localmente:', err);
+      // Fallback amigable: asociar a palabras clave para indexación
+      setPubForm((prev) => ({
+        ...prev,
+        palabras_clave: prev.palabras_clave ? `${prev.palabras_clave}, ${name}` : name,
+      }));
+      setCustomCatFeedback(`Categoría "${name}" agregada a los descriptores de la publicación.`);
+    } finally {
+      setCreatingCategory(false);
+      setCustomCatName('');
+      setTimeout(() => setCustomCatFeedback(''), 4500);
     }
   };
 
@@ -523,7 +668,7 @@ export default function AdminPublicacionesPage() {
       ====================================================================== */}
       {pubModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-xs sm:items-center sm:p-4">
-          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl min-w-0 flex-col rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl min-w-0 flex-col rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-2xl">post_add</span>
@@ -612,36 +757,295 @@ export default function AdminPublicacionesPage() {
                 </select>
               </div>
 
-              {/* Clasificación Académica: Categorías */}
-              <div>
-                <label className="font-bold text-on-surface block mb-1">
-                  Clasificación y Categorías Temáticas
-                </label>
-                <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/20 max-h-36 overflow-y-auto space-y-1.5">
-                  {categories.length === 0 ? (
-                    <span className="text-outline italic">No hay categorías configuradas.</span>
-                  ) : (
-                    categories.map((cat) => {
-                      const isChecked = pubForm.categoria_ids.includes(cat.id);
+              {/* Clasificación Académica: Siete Áreas Temáticas Permanentes */}
+              <div className="space-y-3 pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/20 pb-2">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
+                      Taxonomía de Conocimiento Institucional
+                    </span>
+                    <h4 className="text-sm font-bold text-primary flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-base">account_tree</span>
+                      Siete Áreas Temáticas Permanentes de ABOCCRIM
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {pubForm.categoria_ids.length > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">check_circle</span>
+                        {pubForm.categoria_ids.length} seleccionada{pubForm.categoria_ids.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {pubForm.categoria_ids.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPubForm({ ...pubForm, categoria_ids: [] })}
+                        className="text-[11px] text-error hover:underline cursor-pointer font-semibold"
+                      >
+                        Limpiar selección
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filtro rápido y selector de pestañas de áreas */}
+                <div className="space-y-2">
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-base">search</span>
+                    <input
+                      type="text"
+                      placeholder="Filtrar subárea o especialidad (ej: balística, escena, genética, víctima, penal)..."
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 bg-surface-container-low rounded-lg border border-outline-variant/30 text-xs text-on-surface focus:outline-none focus:border-primary"
+                    />
+                    {categorySearch && (
+                      <button
+                        type="button"
+                        onClick={() => setCategorySearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                      >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Pestañas de navegación rápida de áreas */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] scrollbar-thin">
+                    <button
+                      type="button"
+                      onClick={() => setActiveAreaTab('todas')}
+                      className={`px-2.5 py-1 rounded-lg font-semibold shrink-0 cursor-pointer transition-all ${
+                        activeAreaTab === 'todas'
+                          ? 'bg-primary text-on-primary shadow-xs'
+                          : 'bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high'
+                      }`}
+                    >
+                      Todas las Áreas (7)
+                    </button>
+                    {AREAS_TEMATICAS_TAXONOMIA.map((area) => {
+                      const countInArea = categories
+                        .filter((c) => (c.area_nombre && c.area_nombre.includes(area.titulo)) || area.subareas.includes(c.nombre))
+                        .filter((c) => pubForm.categoria_ids.includes(c.id)).length;
                       return (
-                        <label key={cat.id} className="flex items-center gap-2 cursor-pointer hover:bg-surface-container-high/50 p-1 rounded">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {
-                              const next = isChecked
-                                ? pubForm.categoria_ids.filter((id) => id !== cat.id)
-                                : [...pubForm.categoria_ids, cat.id];
-                              setPubForm({ ...pubForm, categoria_ids: next });
-                            }}
-                            className="rounded border-outline-variant/40 text-primary focus:ring-primary"
-                          />
-                          <span className="text-on-surface">
-                            <strong>{cat.area_nombre}</strong> — {cat.nombre}
-                          </span>
-                        </label>
+                        <button
+                          key={area.numero}
+                          type="button"
+                          onClick={() => setActiveAreaTab(area.numero.toString())}
+                          className={`px-2.5 py-1 rounded-lg font-semibold shrink-0 cursor-pointer transition-all flex items-center gap-1 ${
+                            activeAreaTab === area.numero.toString()
+                              ? 'bg-primary text-on-primary shadow-xs'
+                              : 'bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-xs">{area.icono}</span>
+                          <span>{area.titulo}</span>
+                          {countInArea > 0 && (
+                            <span className="ml-0.5 px-1 py-0.2 rounded-full bg-white/20 text-[10px] font-bold">
+                              {countInArea}
+                            </span>
+                          )}
+                        </button>
                       );
-                    })
+                    })}
+                  </div>
+                </div>
+
+                {/* Contenedor con scroll para las tarjetas de las 7 Áreas */}
+                <div className="max-h-72 overflow-y-auto pr-1 space-y-3 border border-outline-variant/20 rounded-xl p-2.5 bg-surface-container-low/40">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {AREAS_TEMATICAS_TAXONOMIA
+                      .filter((area) => activeAreaTab === 'todas' || activeAreaTab === area.numero.toString())
+                      .map((area) => {
+                        // Obtener las categorías que pertenecen a esta área
+                        const areaCategories = categories.filter((c) => {
+                          const matchesArea = (c.area_nombre && (c.area_nombre.includes(area.titulo) || c.area_nombre.startsWith(`${area.numero}.`)));
+                          const matchesSubarea = area.subareas.some((s) => s.toLowerCase() === c.nombre.toLowerCase());
+                          return matchesArea || matchesSubarea;
+                        });
+
+                        // Para asegurar que todas las 4 subareas se muestren con su ID real de la BD
+                        const itemsToRender = area.subareas.map((subName) => {
+                          const found = areaCategories.find((c) => c.nombre.toLowerCase() === subName.toLowerCase());
+                          return found || { id: `predef_${subName}`, nombre: subName, area_nombre: area.nombre };
+                        });
+
+                        // Filtrar por término de búsqueda si existe
+                        const filteredItems = categorySearch.trim()
+                          ? itemsToRender.filter((it) => it.nombre.toLowerCase().includes(categorySearch.toLowerCase()))
+                          : itemsToRender;
+
+                        if (categorySearch.trim() && filteredItems.length === 0) {
+                          return null;
+                        }
+
+                        const selectedInCard = filteredItems.filter((it) => pubForm.categoria_ids.includes(it.id)).length;
+
+                        return (
+                          <div
+                            key={area.numero}
+                            className={`p-3 rounded-xl border transition-all ${
+                              selectedInCard > 0
+                                ? 'bg-surface-container-lowest border-primary/40 shadow-xs'
+                                : 'bg-surface-container-lowest border-outline-variant/20'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1.5 mb-1">
+                              <div className="flex items-center gap-1.5 text-primary font-bold text-xs">
+                                <span className="material-symbols-outlined text-base text-secondary">{area.icono}</span>
+                                <span>{area.nombre}</span>
+                              </div>
+                              {selectedInCard > 0 && (
+                                <span className="px-1.5 py-0.2 rounded-md bg-primary/10 text-primary text-[10px] font-bold">
+                                  {selectedInCard} activa{selectedInCard > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-on-surface-variant leading-tight mb-2 line-clamp-2">
+                              {area.descripcion}
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {filteredItems.map((cat) => {
+                                const isChecked = pubForm.categoria_ids.includes(cat.id);
+                                return (
+                                  <label
+                                    key={cat.id}
+                                    className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-xs cursor-pointer select-none transition-all ${
+                                      isChecked
+                                        ? 'bg-primary/10 border-primary text-primary font-bold shadow-2xs'
+                                        : 'bg-surface-container-low/60 border-outline-variant/20 text-on-surface hover:border-primary/40 hover:bg-surface-container-high/40'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => handleToggleCategory(cat.id)}
+                                      className="rounded border-outline-variant/40 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer shrink-0"
+                                    />
+                                    <span className="text-[11px] leading-tight truncate">
+                                      {cat.nombre}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Otras categorías institucionales registradas */}
+                  {(() => {
+                    const allPredefNames = AREAS_TEMATICAS_TAXONOMIA.flatMap((a) => a.subareas.map((s) => s.toLowerCase()));
+                    const extraCategories = categories.filter((c) => !allPredefNames.includes(c.nombre.toLowerCase()));
+                    if (extraCategories.length === 0) return null;
+
+                    const filteredExtras = categorySearch.trim()
+                      ? extraCategories.filter((c) => c.nombre.toLowerCase().includes(categorySearch.toLowerCase()))
+                      : extraCategories;
+
+                    if (categorySearch.trim() && filteredExtras.length === 0) return null;
+
+                    return (
+                      <div className="p-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest">
+                        <div className="flex items-center gap-1.5 text-primary font-bold text-xs mb-1.5">
+                          <span className="material-symbols-outlined text-base text-secondary">extension</span>
+                          <span>Otras Categorías Institucionales Registradas</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                          {filteredExtras.map((cat) => {
+                            const isChecked = pubForm.categoria_ids.includes(cat.id);
+                            return (
+                              <label
+                                key={cat.id}
+                                className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-xs cursor-pointer select-none transition-all ${
+                                  isChecked
+                                    ? 'bg-primary/10 border-primary text-primary font-bold shadow-2xs'
+                                    : 'bg-surface-container-low/60 border-outline-variant/20 text-on-surface hover:border-primary/40 hover:bg-surface-container-high/40'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleToggleCategory(cat.id)}
+                                  className="rounded border-outline-variant/40 text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer shrink-0"
+                                />
+                                <span className="text-[11px] leading-tight truncate">
+                                  {cat.nombre}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Sección para Añadir Categoría Manual / Personalizada */}
+                <div className="p-3 bg-surface-container-low rounded-xl border border-dashed border-outline-variant/40 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <span className="font-bold text-xs text-primary flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-base text-secondary">add_circle</span>
+                      ¿Desea añadir una categoría específica o manual que no está listada?
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant font-medium">
+                      Se vinculará a la taxonomía y a la publicación
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nombre de la nueva subárea o especialidad..."
+                      value={customCatName}
+                      onChange={(e) => setCustomCatName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateCustomCategory();
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-surface-container-lowest text-on-surface rounded-lg border border-outline-variant/30 text-xs focus:outline-none focus:border-primary"
+                    />
+
+                    <select
+                      value={customCatAreaId}
+                      onChange={(e) => setCustomCatAreaId(e.target.value)}
+                      className="px-3 py-1.5 bg-surface-container-lowest text-on-surface rounded-lg border border-outline-variant/30 text-xs focus:outline-none focus:border-primary cursor-pointer sm:w-56"
+                    >
+                      {areasList.length > 0 ? (
+                        areasList.map((a) => (
+                          <option key={a.id} value={a.id}>{a.nombre}</option>
+                        ))
+                      ) : (
+                        AREAS_TEMATICAS_TAXONOMIA.map((a) => (
+                          <option key={a.numero} value={a.numero}>{a.nombre}</option>
+                        ))
+                      )}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={handleCreateCustomCategory}
+                      disabled={creatingCategory || !customCatName.trim()}
+                      className="px-4 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      {creatingCategory ? (
+                        <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-sm">add</span>
+                      )}
+                      <span>Añadir Categoría</span>
+                    </button>
+                  </div>
+
+                  {customCatFeedback && (
+                    <div className="text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-medium flex items-center gap-1.5 animate-fadeIn">
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      <span>{customCatFeedback}</span>
+                    </div>
                   )}
                 </div>
               </div>

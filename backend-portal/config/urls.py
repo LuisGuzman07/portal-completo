@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/v1/', include('apps.multimedia.urls')),
     path('api/v1/', include('apps.agreements.urls')),
     path('api/v1/', include('apps.incorporation.urls')),
+    path('api/v1/ai/', include('apps.ai_assistant.urls')),
 ]

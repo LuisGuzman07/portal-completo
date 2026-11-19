@@ -12,6 +12,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.audit.models import registrar_auditoria
+from apps.common.storage_service import storage_service
 from .models import Convenio, Institucion
 from .permissions import CanManageAgreements, can_manage_agreements
 from .serializers import ConvenioAdminSerializer, ConvenioPublicoSerializer, InstitucionSerializer
@@ -142,13 +143,15 @@ class ConvenioDocumentoView(views.APIView):
             return Response({'detail': 'El convenio no está publicado o no tienes permiso para acceder.'}, status=status.HTTP_403_FORBIDDEN)
         if agreement.referencia_documental.lower().startswith(('http://', 'https://')):
             return Response({'detail': 'La referencia documental corresponde a un enlace externo.'}, status=status.HTTP_400_BAD_REQUEST)
-        media_root = Path(settings.MEDIA_ROOT).resolve()
-        agreements_root = (media_root / 'convenios').resolve()
-        file_path = (media_root / agreement.referencia_documental).resolve()
-        if agreements_root not in file_path.parents or not file_path.is_file():
+        if not storage_service.file_exists(agreement.referencia_documental):
             return Response({'detail': 'El documento no se encuentra disponible en el almacenamiento.'}, status=status.HTTP_404_NOT_FOUND)
 
-        response = FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+        response = storage_service.stream_file_response(
+            relative_path=agreement.referencia_documental,
+            filename=agreement_download_name(agreement),
+            content_type='application/pdf',
+            inline=True
+        )
         response['Content-Disposition'] = content_disposition_header(True, agreement_download_name(agreement))
         response['X-Content-Type-Options'] = 'nosniff'
         response['Cache-Control'] = 'private, no-store'

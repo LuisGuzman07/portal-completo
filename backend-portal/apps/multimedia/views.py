@@ -11,6 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.audit.models import registrar_auditoria
+from apps.common.storage_service import storage_service
 from .models import RecursoMultimedia
 from .permissions import (
     CanManageMultimedia,
@@ -84,7 +85,7 @@ class RecursoMultimediaAdminListCreateView(generics.ListCreateAPIView):
         )
 
 
-class RecursoMultimediaAdminDetailView(generics.RetrieveUpdateAPIView):
+class RecursoMultimediaAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, CanManageMultimedia]
     queryset = RecursoMultimedia.objects.select_related('evento', 'noticia', 'cargado_por')
     serializer_class = RecursoMultimediaSerializer
@@ -97,6 +98,21 @@ class RecursoMultimediaAdminDetailView(generics.RetrieveUpdateAPIView):
             request=self.request, accion='ACTUALIZAR_RECURSO_MULTIMEDIA', entidad='RecursoMultimedia',
             registro_afectado_id=resource.id,
             detalle=f'Recurso multimedia actualizado: {resource.titulo} (tipo={resource.tipo}, acceso={resource.nivel_acceso}).',
+        )
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        ruta = instance.ruta_o_url
+        titulo = instance.titulo
+        res_id = instance.id
+        if instance.tipo not in ('enlace', 'enlace_noticia') and not ruta.lower().startswith(('http://', 'https://')):
+            from .storage import remove_multimedia_file
+            remove_multimedia_file(ruta)
+        instance.delete()
+        registrar_auditoria(
+            request=self.request, accion='ELIMINAR_RECURSO_MULTIMEDIA', entidad='RecursoMultimedia',
+            registro_afectado_id=res_id,
+            detalle=f'Recurso multimedia eliminado: {titulo}.',
         )
 
 
@@ -113,14 +129,23 @@ class RecursoMultimediaDescargaView(views.APIView):
         if resource.ruta_o_url.lower().startswith(('http://', 'https://')):
             return Response({'detail': 'Este recurso se encuentra en un servicio externo.', 'enlace': resource.ruta_o_url}, status=status.HTTP_400_BAD_REQUEST)
 
-        media_root = Path(settings.MEDIA_ROOT).resolve()
-        file_path = (media_root / resource.ruta_o_url).resolve()
-        if media_root not in file_path.parents or not file_path.is_file():
+        if not storage_service.file_exists(resource.ruta_o_url):
             return Response({'detail': 'El archivo no se encuentra disponible en el almacenamiento.'}, status=status.HTTP_404_NOT_FOUND)
 
-        response = FileResponse(open(file_path, 'rb'), content_type=multimedia_content_type(resource))
         filename = multimedia_download_name(resource)
-        response['Content-Disposition'] = content_disposition_header(True, filename)
+        inline = request.query_params.get('inline') in ('true', '1') or request.query_params.get('stream') in ('true', '1')
+        extension = Path(resource.ruta_o_url).suffix.lower().lstrip('.')
+        if 'inline' not in request.query_params and extension in ('jpg', 'jpeg', 'png', 'webp', 'mp3', 'wav', 'ogg', 'm4a', 'mp4', 'mov', 'webm'):
+            inline = True
+
+        response = storage_service.stream_file_response(
+            relative_path=resource.ruta_o_url,
+            filename=filename,
+            content_type=multimedia_content_type(resource),
+            inline=inline
+        )
+        response['Content-Disposition'] = content_disposition_header(not inline, filename)
+        response['Accept-Ranges'] = 'bytes'
         response['X-Content-Type-Options'] = 'nosniff'
         if resource.nivel_acceso == 'publico':
             response['Cache-Control'] = 'public, max-age=300'

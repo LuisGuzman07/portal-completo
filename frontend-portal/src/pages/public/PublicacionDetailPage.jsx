@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { repositoryService, publicationService } from '../../services/api';
 import CitationModal from '../../components/public/CitationModal';
 
@@ -28,11 +29,13 @@ function formatBytes(bytes) {
 export default function PublicacionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const [publication, setPublication] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isCitationOpen, setIsCitationOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState(null);
   const [shareSuccess, setShareSuccess] = useState(false);
 
@@ -65,6 +68,10 @@ export default function PublicacionDetailPage() {
   }, [id]);
 
   const handleDownload = async (doc) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
     try {
       setDownloadingDocId(doc.id);
       await publicationService.downloadDocumentBlob(doc.id, doc.nombre_original || `${publication.titulo}.pdf`);
@@ -76,6 +83,10 @@ export default function PublicacionDetailPage() {
   };
 
   const handlePreview = async (doc) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
     try {
       await publicationService.previewDocumentBlob(doc.id);
     } catch (err) {
@@ -232,6 +243,17 @@ export default function PublicacionDetailPage() {
                 <span>{shareSuccess ? '¡Copiado!' : 'Compartir'}</span>
               </button>
 
+              {/* Consultar con IA */}
+              <button
+                type="button"
+                onClick={() => navigate('/asistente-academico')}
+                className="px-3.5 py-2 rounded-xl bg-surface-container-low hover:bg-primary/10 text-primary border border-outline-variant/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Consultar al Asistente Académico IA sobre esta investigación"
+              >
+                <span className="material-symbols-outlined text-base">smart_toy</span>
+                <span>Consultar IA</span>
+              </button>
+
               {/* Descargar PDF Principal */}
               {primaryDocument && (
                 <button
@@ -241,7 +263,7 @@ export default function PublicacionDetailPage() {
                   className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-base">
-                    {downloadingDocId === primaryDocument.id ? 'downloading' : 'download'}
+                    {!isAuthenticated ? 'lock' : downloadingDocId === primaryDocument.id ? 'downloading' : 'download'}
                   </span>
                   <span>Descargar PDF</span>
                 </button>
@@ -375,6 +397,23 @@ export default function PublicacionDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {!isAuthenticated && (
+                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5 text-amber-950">
+                        <span className="material-symbols-outlined text-amber-700 text-xl shrink-0">lock</span>
+                        <span>
+                          Para visualizar o descargar los documentos en PDF debes <strong>iniciar sesión</strong>. Los metadatos y el resumen son de acceso público.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAuthModal(true)}
+                        className="px-3 py-1.5 rounded-xl bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs shrink-0 self-start sm:self-center transition-all cursor-pointer"
+                      >
+                        Iniciar sesión
+                      </button>
+                    </div>
+                  )}
                   {publication.documentos.map((doc) => (
                     <div
                       key={doc.id}
@@ -417,7 +456,9 @@ export default function PublicacionDetailPage() {
                           onClick={() => handlePreview(doc)}
                           className="px-3 py-1.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-xs font-semibold text-primary hover:bg-surface-container transition-all flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-sm">visibility</span>
+                          <span className="material-symbols-outlined text-sm">
+                            {!isAuthenticated ? 'lock' : 'visibility'}
+                          </span>
                           <span>Visualizar</span>
                         </button>
                         <button
@@ -427,7 +468,7 @@ export default function PublicacionDetailPage() {
                           className="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1 cursor-pointer shadow-2xs disabled:opacity-50"
                         >
                           <span className="material-symbols-outlined text-sm">
-                            {downloadingDocId === doc.id ? 'downloading' : 'download'}
+                            {!isAuthenticated ? 'lock' : downloadingDocId === doc.id ? 'downloading' : 'download'}
                           </span>
                           <span>Descargar</span>
                         </button>
@@ -567,6 +608,51 @@ export default function PublicacionDetailPage() {
           </aside>
         </div>
       </div>
+
+      {/* Modal de Inicio de Sesión Requerido */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/50 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant/30 shadow-2xl space-y-5 relative">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-5 right-5 p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
+              <span className="material-symbols-outlined text-3xl">lock</span>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-primary">Inicio de Sesión Requerido</h3>
+              <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                Para previsualizar o descargar los documentos académicos en formato PDF debes iniciar sesión con tu cuenta de usuario en ABOCCRIM.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => navigate(`/acceso-miembros?redirect=/repositorio/${id}`)}
+                className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">login</span>
+                <span>Iniciar Sesión en el Portal</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate(`/acceso-miembros?tab=register&redirect=/repositorio/${id}`)}
+                className="w-full py-3 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-primary font-bold text-xs sm:text-sm transition-all border border-primary/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">person_add</span>
+                <span>Registrarse como Usuario</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Multi-format Citation Modal (APA 7th, Harvard, Vancouver, BibTeX) */}
       <CitationModal
