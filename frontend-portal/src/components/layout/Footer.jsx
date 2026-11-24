@@ -64,6 +64,11 @@ export default function Footer() {
 
         <div className="pt-space-lg flex flex-col md:flex-row items-center justify-between gap-space-md text-xs text-on-surface-variant">
           <div>© 2026 Academia Boliviana de Ciencias Criminológicas (ABOCCRIM). Todos los derechos reservados.</div>
+          <div className="flex items-center gap-4 text-xs">
+            <Link to="/acceso-miembros?tab=register" className="hover:text-primary transition-colors">
+              Términos de Uso y Política de Privacidad (D.S. 1793)
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/api';
+import TerminosCondicionesModal from '../../components/common/TerminosCondicionesModal';
 
 export default function AccesoMiembrosPage() {
   const navigate = useNavigate();
@@ -58,6 +59,9 @@ export default function AccesoMiembrosPage() {
   const [registerError, setRegisterError] = useState(null);
   const [registerSuccess, setRegisterSuccess] = useState(null);
   const [registeredEmail, setRegisteredEmail] = useState(null);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [showTerminosModal, setShowTerminosModal] = useState(false);
+  const [modalInitialTab, setModalInitialTab] = useState('terminos');
 
   // Reenvío de confirmación
   const [resendingEmail, setResendingEmail] = useState(false);
@@ -134,6 +138,11 @@ export default function AccesoMiembrosPage() {
     setRegisterSuccess(null);
     setResendStatus(null);
 
+    if (!aceptaTerminos) {
+      setRegisterError("Debe leer y aceptar los Términos y Condiciones de Uso y la Política de Privacidad de ABOCCRIM antes de registrarse.");
+      return;
+    }
+
     if (registerData.password !== registerData.password_confirm) {
       setRegisterError("Las contraseñas no coinciden.");
       return;
@@ -152,7 +161,8 @@ export default function AccesoMiembrosPage() {
         apellidos: registerData.apellidos,
         email: registerData.email,
         password: registerData.password,
-        password_confirm: registerData.password_confirm
+        password_confirm: registerData.password_confirm,
+        acepta_terminos: true
       });
       setRegisteredEmail(registerData.email);
       setRegisterSuccess(res?.message || "¡Cuenta creada exitosamente! Por favor confirma tu correo electrónico.");
@@ -418,6 +428,7 @@ export default function AccesoMiembrosPage() {
                           setRegisteredEmail(null);
                           setRegisterSuccess(null);
                           setResendStatus(null);
+                          setAceptaTerminos(false);
                           setRegisterData({
                             nombres: '',
                             apellidos: '',
@@ -567,9 +578,47 @@ export default function AccesoMiembrosPage() {
                           </div>
                         </div>
 
+                        {/* Checkbox obligatorio de Términos y Condiciones & Política de Privacidad */}
+                        <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-start gap-3 transition-colors hover:border-primary/40">
+                          <input
+                            id="register-terminos"
+                            name="acepta_terminos"
+                            type="checkbox"
+                            required
+                            checked={aceptaTerminos}
+                            onChange={(e) => setAceptaTerminos(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-outline-variant/50 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer shrink-0"
+                          />
+                          <label htmlFor="register-terminos" className="text-xs text-on-surface-variant leading-relaxed cursor-pointer select-none">
+                            He leído y acepto los{' '}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setModalInitialTab('terminos');
+                                setShowTerminosModal(true);
+                              }}
+                              className="text-primary font-bold hover:underline inline-flex items-center gap-0.5"
+                            >
+                              Términos y Condiciones de Uso
+                            </button>
+                            {' '}y la{' '}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setModalInitialTab('privacidad');
+                                setShowTerminosModal(true);
+                              }}
+                              className="text-secondary font-bold hover:underline inline-flex items-center gap-0.5"
+                            >
+                              Política de Privacidad y Tratamiento de Datos
+                            </button>
+                            {' '}de ABOCCRIM (consentimiento previo y expreso conforme al Art. 56 del D.S. N.º 1793).
+                          </label>
+                        </div>
+
                         <button
-                          disabled={registerLoading}
-                          className="mt-2 py-3 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-on-primary font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          disabled={registerLoading || !aceptaTerminos}
+                          className="mt-1 py-3 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-on-primary font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           type="submit"
                         >
                           <span className="material-symbols-outlined text-lg">person_add</span>
@@ -675,6 +724,14 @@ export default function AccesoMiembrosPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Institucional de Términos, Privacidad y Seguridad (11.6) */}
+      <TerminosCondicionesModal
+        isOpen={showTerminosModal}
+        onClose={() => setShowTerminosModal(false)}
+        onAccept={() => setAceptaTerminos(true)}
+        initialTab={modalInitialTab}
+      />
     </div>
   );
 }

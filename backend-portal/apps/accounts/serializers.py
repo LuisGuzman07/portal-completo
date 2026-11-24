@@ -46,10 +46,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, required=True)
+    acepta_terminos = serializers.BooleanField(required=False, write_only=True, default=True)
 
     class Meta:
         model = Usuario
-        fields = ['email', 'nombres', 'apellidos', 'password', 'password_confirm']
+        fields = ['email', 'nombres', 'apellidos', 'password', 'password_confirm', 'acepta_terminos']
 
     def validate_email(self, value):
         norm_email = value.lower().strip()
@@ -64,7 +65,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
+        validated_data.pop('password_confirm', None)
+        validated_data.pop('acepta_terminos', None)
         password = validated_data.pop('password')
         user = Usuario.objects.create_user(
             email=validated_data['email'],
