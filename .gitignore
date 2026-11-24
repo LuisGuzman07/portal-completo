@@ -5,8 +5,7 @@
 .env*.local
 *.env
 !.env.example
-# Credenciales Firebase (habilitadas para sincronización directa en repo privado)
-!backend-portal/firebase-key.json
+*firebase-key.json
 google-services.json
 
 # ===================================================
