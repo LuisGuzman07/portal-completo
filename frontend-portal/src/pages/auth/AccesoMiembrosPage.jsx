@@ -184,12 +184,9 @@ export default function AccesoMiembrosPage() {
   };
 
   return (
-    <div className="flex flex-col w-full flex-1">
-      <div className="w-full px-margin-mobile md:px-margin-desktop py-space-xl">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
-          {/* Main Card with Login / Register */}
-          <div className="lg:col-span-7 flex flex-col gap-space-lg">
-            {/* Header institution card */}
+    <div className="flex flex-col w-full flex-1 justify-center items-center py-space-xl px-margin-mobile md:px-margin-desktop min-h-[calc(100vh-220px)]">
+      <div className="w-full max-w-xl md:max-w-2xl mx-auto flex flex-col gap-space-lg">
+        {/* Header institution card */}
             <div className="bg-surface-container-lowest rounded-2xl shadow-sm p-6 md:p-8 flex flex-col sm:flex-row items-center gap-space-lg border border-outline-variant/20">
               <div className="w-20 h-20 flex-shrink-0 bg-surface-container-low rounded-xl flex items-center justify-center p-2 shadow-xs border border-outline-variant/20">
                 <img
@@ -644,86 +641,6 @@ export default function AccesoMiembrosPage() {
               )}
             </div>
           </div>
-
-          {/* Right Column: Demo Accounts Box */}
-          <div className="lg:col-span-5 flex flex-col gap-space-md">
-            <div className="bg-surface-container-lowest rounded-2xl shadow-sm p-6 border border-primary/20 space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/20">
-                <span className="material-symbols-outlined text-primary text-xl">account_circle</span>
-                <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                  Cuentas de Acceso por Rol
-                </span>
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Selecciona una cuenta para cargar automáticamente sus credenciales:
-              </p>
-
-              <div className="space-y-2 text-xs pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("superadmin@aboccrim.test")}
-                  className="w-full p-3 rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-colors border border-outline-variant/20"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-bold text-primary">Superadministrador</span>
-                    <span className="text-[11px] text-outline font-mono">superadmin@aboccrim.test</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-bold text-[10px]">
-                    Superadmin
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("academico@aboccrim.test")}
-                  className="w-full p-3 rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-colors border border-outline-variant/20"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-bold text-primary">Administrador Académico</span>
-                    <span className="text-[11px] text-outline font-mono">academico@aboccrim.test</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-secondary/10 text-secondary font-bold text-[10px]">
-                    Académico
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("investigador@aboccrim.test")}
-                  className="w-full p-3 rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-colors border border-outline-variant/20"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-bold text-primary">Investigador</span>
-                    <span className="text-[11px] text-outline font-mono">investigador@aboccrim.test</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-bold text-[10px]">
-                    Investigador
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("usuario@aboccrim.test")}
-                  className="w-full p-3 rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-colors border border-outline-variant/20"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-bold text-primary">Usuario Registrado</span>
-                    <span className="text-[11px] text-outline font-mono">usuario@aboccrim.test</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-surface-container text-outline font-bold text-[10px]">
-                    Usuario
-                  </span>
-                </button>
-              </div>
-
-              <div className="pt-2 border-t border-outline-variant/20 flex items-center justify-between text-xs text-outline">
-                <span>Contraseña demo:</span>
-                <span className="font-mono font-bold text-primary">Aboccrim2025!</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Modal Institucional de Términos, Privacidad y Seguridad (11.6) */}
       <TerminosCondicionesModal
