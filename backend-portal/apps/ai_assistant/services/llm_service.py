@@ -86,6 +86,8 @@ class LLMService:
                 return err_msg
 
             try:
+                import warnings
+                warnings.filterwarnings('ignore', category=FutureWarning)
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 raw_model = getattr(settings, 'GENERATIVE_MODEL', 'gemini-3.8-flash')

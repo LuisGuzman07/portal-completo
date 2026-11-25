@@ -79,6 +79,8 @@ def get_text_embedding(text: str) -> list[float]:
         api_key = getattr(settings, 'GEMINI_API_KEY', '') or os.getenv('GEMINI_API_KEY', '')
         if api_key and not _api_disabled:
             try:
+                import warnings
+                warnings.filterwarnings('ignore', category=FutureWarning)
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 raw_model = getattr(settings, 'EMBEDDING_MODEL', 'gemini-embedding-001')
@@ -126,6 +128,8 @@ def get_query_embedding(query: str) -> list[float]:
         api_key = getattr(settings, 'GEMINI_API_KEY', '') or os.getenv('GEMINI_API_KEY', '')
         if api_key and not _api_disabled:
             try:
+                import warnings
+                warnings.filterwarnings('ignore', category=FutureWarning)
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 raw_model = getattr(settings, 'EMBEDDING_MODEL', 'gemini-embedding-001')
