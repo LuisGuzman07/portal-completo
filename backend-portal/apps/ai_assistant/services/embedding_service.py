@@ -81,13 +81,19 @@ def get_text_embedding(text: str) -> list[float]:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-                raw_model = getattr(settings, 'EMBEDDING_MODEL', 'models/text-embedding-004')
-                model_name = raw_model if raw_model.startswith('models/') else f'models/{raw_model}'
-                result = genai.embed_content(
-                    model=model_name,
-                    content=text,
-                    task_type='retrieval_document',
-                )
+                raw_model = getattr(settings, 'EMBEDDING_MODEL', 'gemini-embedding-001')
+                if raw_model in ('text-embedding-004', 'models/text-embedding-004'):
+                    model_name = 'models/gemini-embedding-001'
+                else:
+                    model_name = raw_model if raw_model.startswith('models/') else f'models/{raw_model}'
+
+                kwargs = {'model': model_name, 'content': text}
+                if 'gemini-embedding' in model_name:
+                    kwargs['output_dimensionality'] = 768
+                else:
+                    kwargs['task_type'] = 'retrieval_document'
+
+                result = genai.embed_content(**kwargs)
                 embedding = result.get('embedding', [])
                 if embedding and len(embedding) == 768:
                     return embedding
@@ -122,13 +128,19 @@ def get_query_embedding(query: str) -> list[float]:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-                raw_model = getattr(settings, 'EMBEDDING_MODEL', 'models/text-embedding-004')
-                model_name = raw_model if raw_model.startswith('models/') else f'models/{raw_model}'
-                result = genai.embed_content(
-                    model=model_name,
-                    content=query,
-                    task_type='retrieval_query',
-                )
+                raw_model = getattr(settings, 'EMBEDDING_MODEL', 'gemini-embedding-001')
+                if raw_model in ('text-embedding-004', 'models/text-embedding-004'):
+                    model_name = 'models/gemini-embedding-001'
+                else:
+                    model_name = raw_model if raw_model.startswith('models/') else f'models/{raw_model}'
+
+                kwargs = {'model': model_name, 'content': query}
+                if 'gemini-embedding' in model_name:
+                    kwargs['output_dimensionality'] = 768
+                else:
+                    kwargs['task_type'] = 'retrieval_query'
+
+                result = genai.embed_content(**kwargs)
                 embedding = result.get('embedding', [])
                 if embedding and len(embedding) == 768:
                     return embedding

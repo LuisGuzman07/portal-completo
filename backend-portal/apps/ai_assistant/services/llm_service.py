@@ -88,7 +88,12 @@ class LLMService:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-                model_name = getattr(settings, 'GENERATIVE_MODEL', 'gemini-1.5-flash')
+                raw_model = getattr(settings, 'GENERATIVE_MODEL', 'gemini-3.8-flash')
+                # Mapear modelos legacy a gemini-3.8-flash para compatibilidad con nuevas claves AQ.
+                if raw_model in ('gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.5-flash', 'gemini-flash-latest'):
+                    model_name = 'gemini-3.8-flash'
+                else:
+                    model_name = raw_model
 
                 model = genai.GenerativeModel(
                     model_name=model_name,
