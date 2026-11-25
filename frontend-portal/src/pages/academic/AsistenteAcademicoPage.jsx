@@ -56,7 +56,10 @@ export default function AsistenteAcademicoPage() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const [expandedSources, setExpandedSources] = useState({}); // { messageId: boolean }
-  const [pdfModalUrl, setPdfModalUrl] = useState(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [pdfDocTitle, setPdfDocTitle] = useState('');
+  const [pdfLoadingError, setPdfLoadingError] = useState(null);
   const [highlightedSource, setHighlightedSource] = useState(null);
 
   const messagesEndRef = useRef(null);
@@ -329,11 +332,78 @@ export default function AsistenteAcademicoPage() {
     scrollToBottom();
   }, [activeConversation?.mensajes, sendingQuery]);
 
-  // Click en cita dentro del texto [1], [2] -> expandir fuentes y resaltar
+  // Click en cita dentro del texto [1], [2] -> expandir fuentes, hacer scroll suave y resaltar
   const handleCitationClick = (msgId, citationNum) => {
+    // 1. Abrir acordeón de fuentes si está cerrado
     setExpandedSources((prev) => ({ ...prev, [msgId]: true }));
-    setHighlightedSource(`${msgId}-${citationNum}`);
-    setTimeout(() => setHighlightedSource(null), 3500);
+    
+    // 2. Marcar fuente resaltada
+    const highlightKey = `${msgId}-${citationNum}`;
+    setHighlightedSource(highlightKey);
+
+    // 3. Scroll suave hacia la tarjeta de la fuente referenciada
+    setTimeout(() => {
+      const el = document.getElementById(`source-card-${msgId}-${citationNum}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 120);
+
+    // 4. Limpiar resaltado después de unos segundos
+    setTimeout(() => {
+      setHighlightedSource((curr) => (curr === highlightKey ? null : curr));
+    }, 4000);
+  };
+
+  // Abrir visor de PDF auténtico (descargando blob autenticado con JWT)
+  const handleOpenPdfModal = async (fuente) => {
+    const docId = fuente.documento_id;
+    if (!docId) {
+      alert('Esta cita no tiene un archivo PDF digital asociado.');
+      return;
+    }
+
+    try {
+      setLoadingPdf(true);
+      setPdfLoadingError(null);
+      setPdfDocTitle(fuente.cita_bibliografica || fuente.publicacion_titulo || 'Documento Digital');
+
+      const token = localStorage.getItem('aboccrim_token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const baseApi = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+      const cleanBase = baseApi.endsWith('/api/v1') ? baseApi : `${baseApi.replace(/\/+$/, '')}/api/v1`;
+      const url = `${cleanBase}/publications/documents/${docId}/download/?inline=1`;
+
+      const response = await fetch(url, { headers });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.error || `Error ${response.status}: No se pudo descargar el documento.`);
+      }
+
+      const blob = await response.blob();
+      const rawUrl = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const pageAnchor = fuente.numero_pagina ? `#page=${fuente.numero_pagina}` : '';
+      setPdfBlobUrl(rawUrl + pageAnchor);
+    } catch (err) {
+      console.error('Error al abrir visor de PDF:', err);
+      setPdfLoadingError(err.message);
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
+
+  const handleClosePdfModal = () => {
+    if (pdfBlobUrl) {
+      const raw = pdfBlobUrl.split('#')[0];
+      try {
+        window.URL.revokeObjectURL(raw);
+      } catch (e) {}
+    }
+    setPdfBlobUrl(null);
+    setPdfLoadingError(null);
+    setPdfDocTitle('');
   };
 
   // Renderizador de Markdown enriquecido con badges de cita [1], [2]
@@ -429,8 +499,8 @@ export default function AsistenteAcademicoPage() {
             key={idx}
             type="button"
             onClick={() => handleCitationClick(msgId, part.num)}
-            className="inline-flex items-center justify-center w-5 h-5 mx-0.5 rounded-md bg-blue-100/90 hover:bg-blue-200 text-primary font-bold text-[11px] align-middle transition-colors cursor-pointer border border-blue-200/60 shadow-2xs"
-            title={`Ver fuente consultada [${part.num}]`}
+            className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 mx-0.5 rounded-md bg-blue-100 hover:bg-[#00055d] hover:text-white text-primary font-bold text-[11px] align-middle transition-all cursor-pointer border border-blue-300/70 shadow-2xs active:scale-95"
+            title={`Ver referencia [${part.num}] en las fuentes consultadas`}
           >
             {part.num}
           </button>
@@ -855,9 +925,10 @@ export default function AsistenteAcademicoPage() {
                                 return (
                                   <div
                                     key={fuente.id || fuente.orden_cita}
-                                    className={`p-2.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs ${
+                                    id={`source-card-${msg.id}-${fuente.orden_cita}`}
+                                    className={`p-2.5 rounded-xl border transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs ${
                                       isHighlighted
-                                        ? 'bg-blue-100/90 border-primary ring-2 ring-blue-300'
+                                        ? 'bg-blue-50/95 border-primary ring-2 ring-primary/40 shadow-md scale-[1.01]'
                                         : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/60'
                                     }`}
                                   >
@@ -880,10 +951,10 @@ export default function AsistenteAcademicoPage() {
 
                                     {/* Botones de acción: PDF y Ver Publicación */}
                                     <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                                      {fuente.pdf_url ? (
+                                      {fuente.documento_id || fuente.pdf_url ? (
                                         <button
                                           type="button"
-                                          onClick={() => setPdfModalUrl(fuente.pdf_url)}
+                                          onClick={() => handleOpenPdfModal(fuente)}
                                           className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-primary/50 text-slate-700 hover:text-primary text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer"
                                           title="Visualizar documento PDF"
                                         >
@@ -987,44 +1058,71 @@ export default function AsistenteAcademicoPage() {
       {/* ========================================================= */}
       {/* MODAL DE VISUALIZACIÓN DE PDF */}
       {/* ========================================================= */}
-      {pdfModalUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6">
+      {(pdfBlobUrl || loadingPdf || pdfLoadingError) && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
           <div className="bg-white rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
             {/* Header del modal */}
             <div className="h-14 px-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">picture_as_pdf</span>
-                <span className="text-xs sm:text-sm font-bold text-slate-800">
-                  Visor de Documento Digital ABOCCRIM
+              <div className="flex items-center gap-2 min-w-0 pr-4">
+                <span className="material-symbols-outlined text-primary text-xl shrink-0">picture_as_pdf</span>
+                <span className="text-xs sm:text-sm font-bold text-slate-800 truncate" title={pdfDocTitle}>
+                  {pdfDocTitle || 'Visor de Documento Digital ABOCCRIM'}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={pdfModalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-sm">open_in_new</span>
-                  <span>Abrir en pestaña</span>
-                </a>
+              <div className="flex items-center gap-2 shrink-0">
+                {pdfBlobUrl && (
+                  <a
+                    href={pdfBlobUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">open_in_new</span>
+                    <span>Abrir en pestaña</span>
+                  </a>
+                )}
                 <button
                   type="button"
-                  onClick={() => setPdfModalUrl(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
+                  onClick={handleClosePdfModal}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
+                  title="Cerrar visor"
                 >
                   <span className="material-symbols-outlined text-xl">close</span>
                 </button>
               </div>
             </div>
 
-            {/* Iframe con el PDF */}
-            <div className="flex-1 bg-slate-100">
-              <iframe
-                src={pdfModalUrl}
-                title="Documento PDF"
-                className="w-full h-full border-none"
-              />
+            {/* Contenido del visor */}
+            <div className="flex-1 bg-slate-100 relative">
+              {loadingPdf && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10 gap-3">
+                  <span className="material-symbols-outlined text-primary text-4xl animate-spin">sync</span>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-700">Cargando documento PDF del repositorio...</p>
+                </div>
+              )}
+
+              {pdfLoadingError && (
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                  <span className="material-symbols-outlined text-red-500 text-5xl mb-2">error</span>
+                  <p className="text-sm font-bold text-slate-800">No se pudo cargar el documento</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md">{pdfLoadingError}</p>
+                  <button
+                    type="button"
+                    onClick={handleClosePdfModal}
+                    className="mt-4 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                  >
+                    Cerrar visor
+                  </button>
+                </div>
+              )}
+
+              {pdfBlobUrl && !loadingPdf && (
+                <iframe
+                  src={pdfBlobUrl}
+                  title={pdfDocTitle || "Documento PDF"}
+                  className="w-full h-full border-none"
+                />
+              )}
             </div>
           </div>
         </div>
