@@ -38,10 +38,58 @@ def is_conversational_or_greeting(text: str) -> bool:
     return False
 
 
+def is_catalog_or_overview_query(text: str) -> bool:
+    """
+    Detecta si el usuario está consultando sobre el catálogo, inventario,
+    qué documentos o qué publicaciones existen en el repositorio.
+    """
+    cleaned = text.lower().strip()
+    # Normalizar errores tipográficos comunes (ej. docuementos, documetos)
+    cleaned = re.sub(r'docuem[a-z]*', 'documento', cleaned)
+    cleaned = re.sub(r'docum[a-z]*', 'documento', cleaned)
+    cleaned = re.sub(r'[^\w\s]', '', cleaned)
+
+    # 1. Frases y patrones exactos de inventario
+    catalog_exact = [
+        'que documentos tenemos', 'que documentos hay', 'que documentos existen',
+        'que publicaciones tenemos', 'que publicaciones hay', 'que publicaciones existen',
+        'cuales son los documentos', 'cuales son las publicaciones', 'cuales documentos',
+        'que investigaciones tenemos', 'que investigaciones hay', 'que investigaciones existen',
+        'que tesis tenemos', 'que tesis hay', 'que tesis existen',
+        'catalogo de publicaciones', 'catalogo de documentos', 'catalogo del repositorio',
+        'listar publicaciones', 'listar documentos', 'mostrar publicaciones', 'mostrar documentos',
+        'que hay en el repositorio', 'que contiene el repositorio',
+        'que tenemos en el repositorio', 'que libros tenemos', 'que articulos tenemos',
+        'cuales son las investigaciones', 'que temas tenemos', 'con que documentos contamos',
+        'que documentos contiene', 'que investigaciones contiene',
+        'todos los documentos', 'todas las publicaciones'
+    ]
+    for pattern in catalog_exact:
+        if pattern in cleaned:
+            return True
+
+    # 2. Análisis semántico por palabras clave combinadas
+    has_inquiry = bool(re.search(r'\b(que|cuales|cual|listar|muestra|mostrar|ver|dime|conoce|lista|inventario|catalogo|resumen)\b', cleaned))
+    has_entity = bool(re.search(r'\b(documento|documentos|publicacion|publicaciones|investigacion|investigaciones|tesis|articulo|articulos|temas)\b', cleaned))
+    has_scope = bool(re.search(r'\b(repositorio|biblioteca|plataforma|academia|aboccrim|tenemos|hay|cuenta|existen|disponibles?|registrad[ao]s?)\b', cleaned))
+
+    if has_inquiry and has_entity and has_scope:
+        return True
+
+    return False
+
+
 def format_apa_citation(pub: Publicacion) -> str:
     """Genera la cita bibliográfica en formato estándar académico."""
     autores = [a.nombre_completo for a in pub.autores.all()]
-    autores_str = ', '.join(autores) if autores else pub.registrada_por_nombre or 'ABOCCRIM'
+    if autores:
+        autores_str = ', '.join(autores)
+    else:
+        autor_registra = getattr(pub, 'registrada_por_nombre', None)
+        if not autor_registra and getattr(pub, 'registrada_por', None):
+            autor_registra = pub.registrada_por.get_full_name() or pub.registrada_por.email
+        autores_str = autor_registra or 'ABOCCRIM'
+
     anio_str = str(pub.anio) if pub.anio else 's.f.'
     return f"{autores_str} ({anio_str}). {pub.titulo}. Repositorio Académico ABOCCRIM."
 
@@ -51,6 +99,18 @@ class RAGQueryEngine:
     Motor principal de Generación Aumentada por Recuperación (RAG) de ABOCCRIM.
     Combina recuperación precisa del repositorio institucional con capacidad de respuesta general.
     """
+
+    SYSTEM_INSTRUCTION_CATALOG = (
+        "Eres el Asistente Académico Inteligente de la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).\n"
+        "El usuario está consultando sobre el catálogo, inventario o publicaciones disponibles en el repositorio institucional.\n"
+        "Se te proporciona la lista oficial y completa de publicaciones registradas y aprobadas en ABOCCRIM.\n\n"
+        "REGLAS ESTATUTARIAS:\n"
+        "1. Presenta de forma ordenada, clara, estructurada y académica TODAS las publicaciones disponibles en el repositorio institucional.\n"
+        "2. Para cada publicación, menciona su título exacto, autor(es), año y tipo de documento (Tesis, Artículo, etc.).\n"
+        "3. Brinda una breve orientación de qué áreas temáticas abarcan (por ejemplo: peritajes criminalísticos, informática forense / desarrollo de sistemas, derecho procesal penal, etc.).\n"
+        "4. Usa citas numéricas como [1], [2], etc., correspondientes al número de cada publicación provista.\n"
+        "5. Concluye invitando cordialmente al investigador a consultar en detalle sobre cualquiera de estas publicaciones."
+    )
 
     SYSTEM_INSTRUCTION_RAG = (
         "Eres el Asistente Académico Inteligente de la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).\n"
@@ -153,6 +213,112 @@ class RAGQueryEngine:
         # 3. Determinar permisos de acceso a documentos
         allowed_access = cls.determine_user_access(user)
 
+        # CASO 2: Consulta sobre el catálogo o inventario de publicaciones
+        if is_catalog_or_overview_query(query_text):
+            publicaciones_qs = Publicacion.objects.filter(
+                estado__in=['aprobada', 'aprobado', 'publicada', 'publicado']
+            ).select_related('tipo', 'registrada_por').prefetch_related('autores', 'documentos').order_by('-anio', 'titulo')
+
+            # Filtrar por nivel de acceso de documentos
+            publicaciones_autorizadas = []
+            for pub in publicaciones_qs:
+                docs = pub.documentos.all()
+                if not docs.exists() or any(d.nivel_acceso in allowed_access for d in docs):
+                    publicaciones_autorizadas.append(pub)
+
+            if not publicaciones_autorizadas:
+                respuesta_texto = (
+                    "Actualmente no se encuentran publicaciones aprobadas disponibles en el repositorio institucional de ABOCCRIM."
+                )
+                with transaction.atomic():
+                    mensaje_asistente = MensajeIA.objects.create(
+                        conversacion=conversacion,
+                        rol='assistant',
+                        contenido=respuesta_texto
+                    )
+                    conversacion.save(update_fields=['fecha_actualizacion'])
+
+                return {
+                    'conversacion_id': conversacion.id,
+                    'conversacion_titulo': conversacion.titulo,
+                    'mensaje_id': mensaje_asistente.id,
+                    'contenido': respuesta_texto,
+                    'fuentes_consultadas': [],
+                }
+
+            catalog_lines = []
+            fuentes_data = []
+            for idx, pub in enumerate(publicaciones_autorizadas, start=1):
+                autores = ', '.join([a.nombre_completo for a in pub.autores.all()])
+                if not autores and pub.registrada_por:
+                    autores = pub.registrada_por.get_full_name() or pub.registrada_por.email
+                if not autores:
+                    autores = 'ABOCCRIM'
+
+                tipo_nombre = pub.tipo.nombre if pub.tipo else 'Publicación Académica'
+                doc_first = pub.documentos.first()
+                resumen_corto = (pub.resumen[:220] + '...') if pub.resumen and len(pub.resumen) > 220 else (pub.resumen or 'Investigación académica institucional.')
+
+                catalog_lines.append(
+                    f"[{idx}] \"{pub.titulo}\"\n"
+                    f"    - Tipo: {tipo_nombre}\n"
+                    f"    - Autor(es): {autores}\n"
+                    f"    - Año: {pub.anio or 's.f.'}\n"
+                    f"    - Enfoque / Resumen: {resumen_corto}\n\n"
+                )
+
+                fuentes_data.append({
+                    'orden': idx,
+                    'publicacion_id': pub.id,
+                    'documento_id': doc_first.id if doc_first else None,
+                    'titulo': pub.titulo,
+                    'autor': autores,
+                    'anio': pub.anio,
+                    'pagina': 1,
+                    'cita_bibliografica': format_apa_citation(pub),
+                    'pdf_url': f'/api/v1/publications/documents/{doc_first.id}/download/?inline=1' if doc_first else None,
+                    'texto_citado': f"{pub.titulo} ({tipo_nombre}, {pub.anio or 's.f.'}) - {resumen_corto}",
+                    'similitud': 1.0,
+                })
+
+            prompt_catalog = (
+                f"CATÁLOGO OFICIAL DE INVESTIGACIONES Y PUBLICACIONES EN EL REPOSITORIO ABOCCRIM ({len(publicaciones_autorizadas)} publicaciones registradas):\n\n"
+                f"{''.join(catalog_lines)}\n"
+                f"CONSULTA DEL INVESTIGADOR:\n{query_text}\n\n"
+                f"RESPUESTA ACADÉMICA (Enumera y describe con claridad todas las publicaciones disponibles, utilizando citas numéricas [1], [2], etc.):"
+            )
+
+            respuesta_texto = LLMService.generate_content(
+                prompt=prompt_catalog,
+                system_instruction=cls.SYSTEM_INSTRUCTION_CATALOG
+            )
+
+            with transaction.atomic():
+                mensaje_asistente = MensajeIA.objects.create(
+                    conversacion=conversacion,
+                    rol='assistant',
+                    contenido=respuesta_texto
+                )
+                for f in fuentes_data:
+                    FuenteMensajeIA.objects.create(
+                        mensaje=mensaje_asistente,
+                        publicacion_id=f['publicacion_id'],
+                        documento_id=f['documento_id'],
+                        numero_pagina=f['pagina'],
+                        orden_cita=f['orden'],
+                        texto_citado=f['texto_citado'],
+                        cita_bibliografica=f['cita_bibliografica'],
+                    )
+                conversacion.save(update_fields=['fecha_actualizacion'])
+
+            return {
+                'conversacion_id': conversacion.id,
+                'conversacion_titulo': conversacion.titulo,
+                'mensaje_id': mensaje_asistente.id,
+                'contenido': respuesta_texto,
+                'fuentes_consultadas': fuentes_data,
+            }
+
         # 4. Generar embedding de la consulta
         query_vector = get_query_embedding(query_text)
 
@@ -166,9 +332,9 @@ class RAGQueryEngine:
             'documento_indexado__documento',
         ).prefetch_related('publicacion__autores')
 
-        # 6. Calcular similitud coseno con umbral estricto de relevancia
-        # Para nomic-embed-text, coincidencias genuinas superan 0.68
-        SIMILARITY_THRESHOLD = 0.68
+        # 6. Calcular similitud coseno con umbral de relevancia
+        # Para nomic-embed-text o text-embedding-004
+        SIMILARITY_THRESHOLD = 0.65
         scored_fragments = []
         for frag in fragmentos_qs:
             emb = frag.embedding
@@ -178,7 +344,27 @@ class RAGQueryEngine:
                     scored_fragments.append((sim, frag))
 
         scored_fragments.sort(key=lambda x: x[0], reverse=True)
-        top_fragments = scored_fragments[:3]
+
+        # Diversidad de fuentes: evitar que un solo documento extenso acapare todos los fragmentos
+        seen_publications = set()
+        diverse_top_fragments = []
+        for sim, frag in scored_fragments:
+            pub_id = frag.publicacion_id
+            if pub_id not in seen_publications:
+                diverse_top_fragments.append((sim, frag))
+                seen_publications.add(pub_id)
+                if len(diverse_top_fragments) >= 3:
+                    break
+
+        # Si aún hay cupo, rellenar con los mejores restantes aunque repitan publicación
+        if len(diverse_top_fragments) < 3:
+            for sim, frag in scored_fragments:
+                if (sim, frag) not in diverse_top_fragments:
+                    diverse_top_fragments.append((sim, frag))
+                    if len(diverse_top_fragments) >= 3:
+                        break
+
+        top_fragments = diverse_top_fragments
 
         # CASO 2: No hay fragmentos relevantes en el repositorio -> Responder con conocimiento general + aviso
         if not top_fragments:

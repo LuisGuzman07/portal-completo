@@ -122,3 +122,59 @@ class DocumentIndexerService:
                     stats['con_errores'] += 1
 
         return stats
+
+    @classmethod
+    def trigger_async_index_document(cls, documento_id: int):
+        """
+        Dispara la indexación de un documento digital en un hilo en segundo plano,
+        ejecutándose tras la confirmación de la transacción de base de datos.
+        """
+        import threading
+        import logging
+        from django.db import connection, transaction
+
+        logger = logging.getLogger(__name__)
+
+        def _worker():
+            connection.close()
+            try:
+                from apps.publications.models import DocumentoDigital
+                doc = DocumentoDigital.objects.select_related('publicacion').get(pk=documento_id)
+                logger.info(f"[INDEXADOR ASÍNCRONO] Iniciando indexación de doc #{documento_id} ('{doc.titulo}')")
+                reg = cls.index_document(doc)
+                logger.info(f"[INDEXADOR ASÍNCRONO] Doc #{documento_id} finalizado con estado: {reg.estado}")
+            except Exception as e:
+                logger.exception(f"[INDEXADOR ASÍNCRONO] Error indexando doc #{documento_id}: {e}")
+            finally:
+                connection.close()
+
+        transaction.on_commit(lambda: threading.Thread(target=_worker, daemon=True).start())
+
+    @classmethod
+    def trigger_async_index_publication(cls, publicacion_id: int):
+        """
+        Dispara la indexación de todos los documentos de una publicación aprobada
+        en un hilo en segundo plano.
+        """
+        import threading
+        import logging
+        from django.db import connection, transaction
+
+        logger = logging.getLogger(__name__)
+
+        def _worker():
+            connection.close()
+            try:
+                from apps.publications.models import Publicacion
+                pub = Publicacion.objects.prefetch_related('documentos').get(pk=publicacion_id)
+                if pub.estado in ('aprobada', 'aprobado', 'publicada', 'publicado'):
+                    logger.info(f"[INDEXADOR ASÍNCRONO] Publicación #{publicacion_id} aprobada. Indexando documentos asociados...")
+                    for doc in pub.documentos.all():
+                        cls.index_document(doc)
+            except Exception as e:
+                logger.exception(f"[INDEXADOR ASÍNCRONO] Error indexando docs de publicación #{publicacion_id}: {e}")
+            finally:
+                connection.close()
+
+        transaction.on_commit(lambda: threading.Thread(target=_worker, daemon=True).start())
+
