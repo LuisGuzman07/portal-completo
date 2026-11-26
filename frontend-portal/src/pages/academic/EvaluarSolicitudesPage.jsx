@@ -75,7 +75,7 @@ export default function EvaluarSolicitudesPage() {
   const [savingDecision, setSavingDecision] = useState(false);
   const [decisionError, setDecisionError] = useState('');
 
-  // Simulación de análisis curricular con IA
+  // Evaluación curricular con IA (Google Gemini)
   const [aiRunning, setAiRunning] = useState(false);
   const [aiStep, setAiStep] = useState(0);
   const [aiResult, setAiResult] = useState(null);
@@ -200,44 +200,60 @@ export default function EvaluarSolicitudesPage() {
     }
   };
 
-  // Simulación de análisis curricular con IA
-  const handleStartAiAnalysis = () => {
+  // Evaluación Curricular Asistida con IA (Google Gemini)
+  const handleStartAiAnalysis = async () => {
     if (!detail || aiRunning) return;
     setAiRunning(true);
     setAiStep(1);
     setAiResult(null);
+    setDecisionError('');
 
-    // Secuencia simulada con etapas de análisis
-    setTimeout(() => setAiStep(2), 650);
-    setTimeout(() => setAiStep(3), 1300);
-    setTimeout(() => setAiStep(4), 2000);
-    setTimeout(() => {
-      const selectedCategory = categories.find((c) => c.nombre.toLowerCase().includes('titular') || c.nombre.toLowerCase().includes('número')) || categories[0];
-      const categoryName = selectedCategory ? selectedCategory.nombre : 'Miembro Titular';
-      const categoryId = selectedCategory ? selectedCategory.id : (categories[0]?.id || '');
+    // Animación de etapas mientras Gemini procesa los documentos y antecedentes
+    const t1 = setTimeout(() => setAiStep(2), 1200);
+    const t2 = setTimeout(() => setAiStep(3), 2600);
 
-      const generatedResult = {
-        score: 95,
-        nivelAfinidad: 'Alta compatibilidad institucional (Nivel I)',
-        sintesis: `El expediente curricular de ${detail.nombres} ${detail.apellidos} evidencia formación académica relevante, trayectoria docente universitaria y aportes en ciencias criminológicas compatibles con las líneas estatutarias de ABOCCRIM.`,
-        recomendacion: 'Aprobación de Incorporación',
-        categoriaSugerida: categoryName,
-        categoriaId: categoryId,
-        actaSugerida: `Resolución Directiva ABOCCRIM-${new Date().getFullYear()}-${String(detail.id).padStart(4, '0')}`,
-        observacionesSugeridas: `Evaluación curricular asistida con IA: Análisis documental favorable. Se acredita idoneidad académica, méritos investigativos y trayectoria docente para su incorporación formal en la categoría estatutaria de ${categoryName}.`,
-      };
-
+    try {
+      const generatedResult = await incorporationService.analyzeApplicationWithAi(detail.id);
+      setAiStep(4);
       setAiResult(generatedResult);
-      setAiRunning(false);
 
-      // Precargar los datos en el formulario de decisión formal
+      const esAprobada = (generatedResult.score >= 60) && (generatedResult.esApto !== false);
+      const categoriaId = generatedResult.categoriaId || categories[0]?.id || '';
+
+      // Precargar los datos reales analizados por la IA en el formulario de decisión formal
       setDecisionForm({
-        resultado: 'aprobada',
-        referencia_acta: generatedResult.actaSugerida,
-        observaciones: generatedResult.observacionesSugeridas,
-        categoria_id: categoryId,
+        resultado: esAprobada ? 'aprobada' : 'rechazada',
+        referencia_acta: generatedResult.actaSugerida || `Resolución Directiva ABOCCRIM-${new Date().getFullYear()}-${String(detail.id).padStart(4, '0')}`,
+        observaciones: generatedResult.observacionesSugeridas || generatedResult.sintesis || '',
+        categoria_id: categoriaId,
       });
-    }, 2700);
+    } catch (err) {
+      console.error('Error al realizar análisis curricular con IA:', err);
+      setDecisionError(errorMessage(err));
+    } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      setAiRunning(false);
+    }
+  };
+
+  // Resolución y Dictamen 100% Automático con IA
+  const handleAutoEvaluateWithAi = async () => {
+    if (!detail || aiRunning) return;
+    setAiRunning(true);
+    setDecisionError('');
+    setNotice('');
+    try {
+      const res = await incorporationService.autoEvaluateApplication(detail.id);
+      setNotice(res.mensaje || 'Solicitud resuelta y notificada automáticamente con IA.');
+      await selectApplication(detail.id);
+      await loadList();
+    } catch (err) {
+      console.error('Error al auto-evaluar con IA:', err);
+      setDecisionError(errorMessage(err));
+    } finally {
+      setAiRunning(false);
+    }
   };
 
   const download = async (documentItem) => {
@@ -436,86 +452,113 @@ export default function EvaluarSolicitudesPage() {
               </article>
 
               {/* RESOLUCIÓN INSTITUCIONAL YA REGISTRADA */}
-              {hasDecision && detail.decision && (
-                <section className="rounded-2xl border-2 border-emerald-500/30 bg-emerald-50/50 p-6 space-y-4 shadow-sm">
-                  <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-emerald-200">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                        <span className="material-symbols-outlined text-2xl">verified</span>
-                      </div>
-                      <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">
-                          Resolución Oficial de Incorporación
-                        </span>
-                        <h3 className="text-lg font-bold text-emerald-950">
-                          Decisión Institucional Registrada
-                        </h3>
-                      </div>
-                    </div>
-
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                      detail.decision.resultado === 'aprobada'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-rose-600 text-white'
+              {hasDecision && detail.decision && (() => {
+                const isAprobada = detail.decision.resultado === 'aprobada';
+                return (
+                  <section className={`rounded-2xl border-2 p-6 space-y-4 shadow-sm ${
+                    isAprobada ? 'border-emerald-500/30 bg-emerald-50/50' : 'border-rose-500/30 bg-rose-50/50'
+                  }`}>
+                    <div className={`flex items-center justify-between flex-wrap gap-3 pb-3 border-b ${
+                      isAprobada ? 'border-emerald-200' : 'border-rose-200'
                     }`}>
-                      {detail.decision.resultado === 'aprobada' ? 'Incorporación Aprobada' : 'Solicitud Rechazada'}
-                    </span>
-                  </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-xs ${
+                          isAprobada ? 'bg-emerald-600' : 'bg-rose-600'
+                        }`}>
+                          <span className="material-symbols-outlined text-2xl">
+                            {isAprobada ? 'verified' : 'cancel'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                            isAprobada ? 'text-emerald-800' : 'text-rose-800'
+                          }`}>
+                            Resolución Oficial de Incorporación
+                          </span>
+                          <h3 className={`text-lg font-bold ${
+                            isAprobada ? 'text-emerald-950' : 'text-rose-950'
+                          }`}>
+                            Decisión Institucional Registrada
+                          </h3>
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-emerald-900/70 font-semibold block uppercase tracking-wide">Referencia de Acta / Resolución:</span>
-                      <span className="font-bold text-emerald-950 text-sm mt-0.5 block">
-                        {detail.decision.referencia_acta || 'Sin referencia registrada'}
+                      <span className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-white ${
+                        isAprobada ? 'bg-emerald-600' : 'bg-rose-600'
+                      }`}>
+                        {isAprobada ? 'Incorporación Aprobada' : 'Solicitud No Admitida / Rechazada'}
                       </span>
                     </div>
 
-                    <div>
-                      <span className="text-emerald-900/70 font-semibold block uppercase tracking-wide">Fecha de Resolución:</span>
-                      <span className="text-emerald-950 font-medium text-sm mt-0.5 block">
-                        {dateTime(detail.decision.fecha_decision)}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-emerald-900/70 font-semibold block uppercase tracking-wide">Registrada por:</span>
-                      <span className="text-emerald-950 font-medium mt-0.5 block">
-                        {detail.decision.registrada_por_nombre}
-                      </span>
-                    </div>
-
-                    {detail.categoria_miembro_nombre && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                       <div>
-                        <span className="text-emerald-900/70 font-semibold block uppercase tracking-wide">Categoría Asignada:</span>
-                        <span className="font-bold text-emerald-950 text-sm mt-0.5 block">
-                          {detail.categoria_miembro_nombre}
+                        <span className={`font-semibold block uppercase tracking-wide ${isAprobada ? 'text-emerald-900/70' : 'text-rose-900/70'}`}>
+                          Referencia de Acta / Resolución:
                         </span>
+                        <span className={`font-bold text-sm mt-0.5 block ${isAprobada ? 'text-emerald-950' : 'text-rose-950'}`}>
+                          {detail.decision.referencia_acta || 'Sin referencia registrada'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className={`font-semibold block uppercase tracking-wide ${isAprobada ? 'text-emerald-900/70' : 'text-rose-900/70'}`}>
+                          Fecha de Resolución:
+                        </span>
+                        <span className={`font-medium text-sm mt-0.5 block ${isAprobada ? 'text-emerald-950' : 'text-rose-950'}`}>
+                          {dateTime(detail.decision.fecha_decision)}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className={`font-semibold block uppercase tracking-wide ${isAprobada ? 'text-emerald-900/70' : 'text-rose-900/70'}`}>
+                          Registrada por:
+                        </span>
+                        <span className={`font-medium mt-0.5 block ${isAprobada ? 'text-emerald-950' : 'text-rose-950'}`}>
+                          {detail.decision.registrada_por_nombre}
+                        </span>
+                      </div>
+
+                      {detail.categoria_miembro_nombre && (
+                        <div>
+                          <span className={`font-semibold block uppercase tracking-wide ${isAprobada ? 'text-emerald-900/70' : 'text-rose-900/70'}`}>
+                            Categoría Asignada:
+                          </span>
+                          <span className={`font-bold text-sm mt-0.5 block ${isAprobada ? 'text-emerald-950' : 'text-rose-950'}`}>
+                            {detail.categoria_miembro_nombre}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {detail.decision.observaciones && (
+                      <div className={`pt-2 border-t ${isAprobada ? 'border-emerald-200' : 'border-rose-200'}`}>
+                        <span className={`text-xs font-semibold block uppercase tracking-wide ${
+                          isAprobada ? 'text-emerald-900/70' : 'text-rose-900/70'
+                        }`}>
+                          Fundamentos institucionales / Dictamen técnico:
+                        </span>
+                        <p className={`mt-1 text-xs leading-relaxed whitespace-pre-line bg-white/80 p-3.5 rounded-xl border ${
+                          isAprobada ? 'text-emerald-950 border-emerald-200/60' : 'text-rose-950 border-rose-200/60'
+                        }`}>
+                          {detail.decision.observaciones}
+                        </p>
                       </div>
                     )}
-                  </div>
 
-                  {detail.decision.observaciones && (
-                    <div className="pt-2 border-t border-emerald-200">
-                      <span className="text-emerald-900/70 text-xs font-semibold block uppercase tracking-wide">Fundamentos institucionales:</span>
-                      <p className="mt-1 text-xs text-emerald-950 leading-relaxed whitespace-pre-line bg-white/70 p-3 rounded-xl border border-emerald-200/50">
-                        {detail.decision.observaciones}
-                      </p>
-                    </div>
-                  )}
-
-                  {detail.decision.resultado === 'aprobada' && (
-                    <div className="pt-2 flex justify-end">
-                      <Link
-                        to="/dashboard/miembros"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 hover:underline"
-                      >
-                        <span className="material-symbols-outlined text-sm">groups</span>
-                        Ver en Directorio de Miembros Acreditados →
-                      </Link>
-                    </div>
-                  )}
-                </section>
-              )}
+                    {isAprobada && (
+                      <div className="pt-2 flex justify-end">
+                        <Link
+                          to="/dashboard/miembros"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 hover:underline"
+                        >
+                          <span className="material-symbols-outlined text-sm">groups</span>
+                          Ver en Directorio de Miembros Acreditados →
+                        </Link>
+                      </div>
+                    )}
+                  </section>
+                );
+              })()}
 
               {/* HISTORIAL DE EVALUACIONES PRELIMINARES */}
               <section className="space-y-4 rounded-xl border border-outline-variant/35 bg-surface-container-lowest p-4 sm:p-6 shadow-xs">
@@ -624,25 +667,38 @@ export default function EvaluarSolicitudesPage() {
                       </p>
                     </div>
 
-                    {/* BOTÓN ASISTENCIA CON IA SOLICITADO */}
-                    <button
-                      type="button"
-                      onClick={handleStartAiAnalysis}
-                      disabled={aiRunning || savingDecision}
-                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-on-primary px-4 py-2.5 text-xs font-bold shadow-sm hover:shadow transition-all hover:opacity-95 disabled:opacity-50 shrink-0"
-                      title="Simula la evaluación curricular asistida por IA y precarga la recomendación favorable"
-                    >
-                      <span className={`material-symbols-outlined text-base ${aiRunning ? 'animate-spin' : ''}`}>
-                        {aiRunning ? 'progress_activity' : 'auto_awesome'}
-                      </span>
-                      <span>{aiRunning ? 'Analizando currículum...' : 'Iniciar análisis con IA'}</span>
-                      <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] uppercase font-mono tracking-wider">
-                        Asistido
-                      </span>
-                    </button>
+                    {/* BOTONES DE ASISTENCIA Y RESOLUCIÓN AUTOMÁTICA CON IA */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAutoEvaluateWithAi}
+                        disabled={aiRunning || savingDecision}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-on-primary px-4 py-2.5 text-xs font-bold shadow-sm hover:shadow transition-all hover:opacity-95 disabled:opacity-50 shrink-0 cursor-pointer"
+                        title="Analiza con IA, resuelve automáticamente la solicitud (aprueba o rechaza) y notifica al postulante por correo de forma inmediata"
+                      >
+                        <span className={`material-symbols-outlined text-base ${aiRunning ? 'animate-spin' : ''}`}>
+                          {aiRunning ? 'progress_activity' : 'smart_toy'}
+                        </span>
+                        <span>{aiRunning ? 'Procesando auto-resolución...' : 'Auto-Resolver con IA'}</span>
+                        <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] uppercase font-mono tracking-wider">
+                          100% Automático
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleStartAiAnalysis}
+                        disabled={aiRunning || savingDecision}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 px-3 py-2 text-xs font-semibold transition-all disabled:opacity-50 shrink-0 cursor-pointer"
+                        title="Analiza el currículum con IA y precarga los campos para revisión manual antes de formalizar"
+                      >
+                        <span className="material-symbols-outlined text-base">auto_awesome</span>
+                        <span>Inspeccionar IA</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* SIMULACIÓN INTERACTIVA DE IA */}
+                  {/* PROCESO DE EVALUACIÓN CURRICULAR CON IA */}
                   {aiRunning && (
                     <div className="rounded-xl bg-primary/5 border border-primary/20 p-5 space-y-3 animate-pulse">
                       <div className="flex items-center gap-3">
@@ -651,12 +707,12 @@ export default function EvaluarSolicitudesPage() {
                         </span>
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider text-primary">
-                            Motor de Evaluación Curricular Asistida con IA
+                            Motor de Evaluación Curricular Asistida con IA (Google Gemini)
                           </p>
                           <p className="text-xs text-on-surface-variant">
-                            {aiStep === 1 && 'Etapa 1/4: Extrayendo y procesando documento de Currículum Vitae...'}
-                            {aiStep === 2 && 'Etapa 2/4: Evaluando trayectoria docente, grados académicos y especialidades...'}
-                            {aiStep === 3 && 'Etapa 3/4: Verificando afinidad con líneas de investigación criminológica...'}
+                            {aiStep === 1 && 'Etapa 1/4: Extrayendo texto del Currículum Vitae y antecedentes...'}
+                            {aiStep === 2 && 'Etapa 2/4: Evaluando trayectoria docente, grados académicos y especialidades con Gemini...'}
+                            {aiStep === 3 && 'Etapa 3/4: Verificando afinidad con estatutos y líneas criminológicas...'}
                             {aiStep === 4 && 'Etapa 4/4: Generando dictamen técnico de incorporación...'}
                           </p>
                         </div>
@@ -672,52 +728,74 @@ export default function EvaluarSolicitudesPage() {
                   )}
 
                   {/* RESULTADO DE LA EVALUACIÓN ASISTIDA POR IA */}
-                  {aiResult && !aiRunning && (
-                    <div className="rounded-xl bg-emerald-50 border border-emerald-300 p-5 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                            <span className="material-symbols-outlined text-xl">psychology_alt</span>
+                  {aiResult && !aiRunning && (() => {
+                    const isFavorable = (aiResult.score >= 60) && (aiResult.esApto !== false);
+                    return (
+                      <div className={`rounded-xl p-5 space-y-3 border ${
+                        isFavorable ? 'bg-emerald-50 border-emerald-300' : 'bg-amber-50 border-amber-300'
+                      }`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-9 h-9 rounded-lg text-white flex items-center justify-center shrink-0 ${
+                              isFavorable ? 'bg-emerald-600' : 'bg-amber-600'
+                            }`}>
+                              <span className="material-symbols-outlined text-xl">psychology_alt</span>
+                            </div>
+                            <div>
+                              <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                                isFavorable ? 'text-emerald-800' : 'text-amber-800'
+                              }`}>
+                                Dictamen Técnico Asistido por IA (Google Gemini)
+                              </span>
+                              <h4 className={`text-sm font-bold ${
+                                isFavorable ? 'text-emerald-950' : 'text-amber-950'
+                              }`}>
+                                Recomendación: {aiResult.recomendacion}
+                                {aiResult.categoriaSugerida && ` (${aiResult.categoriaSugerida})`}
+                              </h4>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-                              Resultado del Análisis Curricular Asistido
+
+                          <div className="text-right">
+                            <span className={`inline-flex items-center gap-1 rounded-full text-white px-2.5 py-0.5 text-xs font-bold ${
+                              isFavorable ? 'bg-emerald-600' : 'bg-amber-600'
+                            }`}>
+                              <span className="material-symbols-outlined text-xs">grade</span>
+                              {aiResult.score} / 100
                             </span>
-                            <h4 className="text-sm font-bold text-emerald-950">
-                              Recomendación: {aiResult.recomendacion}
-                            </h4>
+                            <span className={`block text-[10px] mt-0.5 ${
+                              isFavorable ? 'text-emerald-800' : 'text-amber-800'
+                            }`}>
+                              {aiResult.nivelAfinidad}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white px-2.5 py-0.5 text-xs font-bold">
-                            <span className="material-symbols-outlined text-xs">grade</span>
-                            {aiResult.score} / 100
+                        <p className={`text-xs leading-relaxed bg-white/70 p-3 rounded-lg border ${
+                          isFavorable ? 'text-emerald-950/90 border-emerald-200' : 'text-amber-950/90 border-amber-200'
+                        }`}>
+                          {aiResult.sintesis}
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+                          <span className={isFavorable ? 'text-emerald-900 font-semibold' : 'text-amber-900 font-semibold'}>
+                            ✓ Parámetros y fundamentación aplicados automáticamente al formulario inferior.
                           </span>
-                          <span className="block text-[10px] text-emerald-800 mt-0.5">{aiResult.nivelAfinidad}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRegisterDecision()}
+                            disabled={savingDecision}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white font-bold transition-all shadow-xs cursor-pointer ${
+                              isFavorable ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-amber-700 hover:bg-amber-800'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-sm">how_to_reg</span>
+                            <span>{isFavorable ? 'Confirmar e incorporar directamente' : 'Aplicar resolución'}</span>
+                          </button>
                         </div>
                       </div>
-
-                      <p className="text-xs text-emerald-950/90 leading-relaxed bg-white/60 p-3 rounded-lg border border-emerald-200">
-                        {aiResult.sintesis}
-                      </p>
-
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-                        <span className="text-emerald-900 font-semibold">
-                          ✓ Parámetros y fundamentos aplicados automáticamente al formulario inferior.
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRegisterDecision()}
-                          disabled={savingDecision}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition-all shadow-xs"
-                        >
-                          <span className="material-symbols-outlined text-sm">how_to_reg</span>
-                          <span>Confirmar e incorporar directamente</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {decisionError && (
                     <div className="rounded-xl p-3.5 bg-error-container/30 border border-error/30 text-error text-xs flex items-center gap-2">

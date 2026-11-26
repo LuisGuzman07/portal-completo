@@ -463,6 +463,12 @@ export const incorporationService = {
     return apiRequest(`/incorporacion/solicitudes/revision/${query ? `?${query}` : ''}`);
   },
   reviewDetail: (id) => apiRequest(`/incorporacion/solicitudes/${id}/revision/`),
+  analyzeApplicationWithAi: (id) => apiRequest(`/incorporacion/solicitudes/${id}/analisis-ia/`, {
+    method: 'POST',
+  }),
+  autoEvaluateApplication: (id) => apiRequest(`/incorporacion/solicitudes/${id}/auto-evaluar/`, {
+    method: 'POST',
+  }),
   evaluate: (id, data) => apiRequest(`/incorporacion/solicitudes/${id}/evaluaciones/`, {
     method: 'POST', body: JSON.stringify(data),
   }),

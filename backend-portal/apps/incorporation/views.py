@@ -1,4 +1,7 @@
+import json
+import logging
 from pathlib import Path
+import re
 
 from django.conf import settings
 from django.core import signing
@@ -15,6 +18,7 @@ from apps.audit.models import registrar_auditoria
 from apps.common.storage_service import storage_service
 from .models import DecisionIncorporacion, DocumentoSolicitud, EvaluacionSolicitud, SolicitudIncorporacion
 from .permissions import CanEvaluateIncorporation
+from .services import evaluate_and_decide_application, trigger_async_auto_evaluation
 from .serializers import (
     DecisionIncorporacionCreateSerializer,
     DecisionIncorporacionSerializer,
@@ -108,6 +112,7 @@ class SolicitudIncorporacionCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         application = serializer.save()
+        transaction.on_commit(lambda: trigger_async_auto_evaluation(application.id))
         registrar_auditoria(
             request=request,
             accion='ENVIAR_SOLICITUD_INCORPORACION',
@@ -181,6 +186,7 @@ class SolicitudIncorporacionSupportingDocumentsView(views.APIView):
             previous_state = application.estado
             application.estado = 'en_revision'
             application.save(update_fields=['estado'])
+            transaction.on_commit(lambda: trigger_async_auto_evaluation(application.id))
             registrar_auditoria(
                 request=request,
                 accion='ENVIAR_DOCUMENTACION_COMPLEMENTARIA',
@@ -535,6 +541,8 @@ class MiSolicitudIncorporacionView(views.APIView):
             application.usuario = user
             application.save(update_fields=['usuario'])
 
+        transaction.on_commit(lambda: trigger_async_auto_evaluation(application.id))
+
         registrar_auditoria(
             request=request,
             accion='ENVIAR_SOLICITUD_INCORPORACION_PANEL',
@@ -589,6 +597,7 @@ class MiSolicitudDocumentacionComplementariaView(views.APIView):
             previous_state = application.estado
             application.estado = 'en_revision'
             application.save(update_fields=['estado'])
+            transaction.on_commit(lambda: trigger_async_auto_evaluation(application.id))
 
             registrar_auditoria(
                 request=request,
@@ -641,3 +650,149 @@ class MiSolicitudDocumentoDownloadView(views.APIView):
         response['X-Content-Type-Options'] = 'nosniff'
         response['Cache-Control'] = 'private, no-store'
         return response
+
+
+class SolicitudIncorporacionAiAnalysisView(views.APIView):
+    """
+    POST /api/v1/incorporacion/solicitudes/<int:pk>/analisis-ia/
+    Realiza el análisis curricular exhaustivo asistido por IA (Google Gemini)
+    sobre el expediente del postulante y sus documentos/CV en PDF.
+    """
+    permission_classes = [IsAuthenticated, CanEvaluateIncorporation]
+
+    def post(self, request, pk):
+        application = SolicitudIncorporacion.objects.prefetch_related('documentos').filter(pk=pk).first()
+        if not application:
+            return Response({'detail': 'La solicitud no existe.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 1. Extraer texto del CV y documentos adjuntos mediante PyMuPDF
+        from apps.ai_assistant.services.pdf_extractor import extract_pages_from_pdf
+        from apps.ai_assistant.services.llm_service import LLMService
+        from apps.academics.models import CategoriaMiembro
+
+        logger = logging.getLogger(__name__)
+        extracted_docs_text = []
+
+        for doc in application.documentos.all():
+            if storage_service.file_exists(doc.ruta_privada):
+                try:
+                    pdf_bytes = storage_service.get_file_bytes(doc.ruta_privada)
+                    pages = extract_pages_from_pdf(pdf_bytes)
+                    if pages:
+                        doc_text = "\n".join([f"[Página {p['numero_pagina']}]\n{p['texto']}" for p in pages[:15]])
+                        extracted_docs_text.append(f"=== DOCUMENTO: {doc.nombre} ({doc.tipo or 'Adjunto'}) ===\n{doc_text}")
+                except Exception as e:
+                    logger.warning(f"No se pudo extraer texto del documento {doc.id} ({doc.nombre}): {e}")
+
+        docs_summary = "\n\n".join(extracted_docs_text) if extracted_docs_text else "No se detectó texto extraíble en los documentos adjuntos."
+
+        # 2. Cargar categorías estatutarias disponibles de ABOCCRIM
+        categorias = list(CategoriaMiembro.objects.values('id', 'nombre', 'descripcion'))
+        categorias_desc = "\n".join([f"- ID {c['id']}: {c['nombre']} - {c['descripcion'] or 'Categoría estatutaria'}" for c in categorias])
+
+        # 3. Construir instrucciones estrictas y académicas para Gemini
+        system_instruction = (
+            "Eres el Consultor Técnico y Evaluador Curricular de la Academia Boliviana de Ciencias Criminológicas (ABOCCRIM).\n"
+            "Tu tarea es evaluar con rigurosidad académica el expediente y Currículum Vitae de una persona postulante a miembro.\n"
+            "Debes analizar objetivamente su formación (licenciatura, postgrados, diplomados), docencia, investigación, producción científica y afinidad estatutaria con las ciencias criminológicas y jurídicas.\n\n"
+            "DEBES RESPONDER EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO (sin bloques de código markdown, sin texto adicional) con esta estructura exacta:\n"
+            "{\n"
+            '  "score": (número entero entre 0 y 100 ponderando méritos globales),\n'
+            '  "esApto": (true si score >= 60, false si score < 60),\n'
+            '  "nivelAfinidad": "(Alta compatibilidad institucional (Nivel I) | Compatibilidad Media (Nivel II) | Compatibilidad Básica (Nivel III) | No compatible)",\n'
+            '  "recomendacion": "(Aprobación de Incorporación | Requiere mayor documentación | Rechazo de Solicitud)",\n'
+            '  "categoriaSugerida": "(Nombre de la categoría estatutaria más idónea de las disponibles)",\n'
+            '  "categoriaId": (ID numérico de la categoría de las provistas),\n'
+            '  "sintesis": "(Análisis curricular riguroso de 2 o 3 párrafos explicando fortalezas, grados, trayectoria y compatibilidad con ABOCCRIM)",\n'
+            '  "actaSugerida": "(ejemplo: Resolución Directiva ABOCCRIM-2026-XXXX)",\n'
+            '  "observacionesSugeridas": "(Fundamentación técnica formal para el dictamen del comité)"\n'
+            "}"
+        )
+
+        prompt = f"""EXPEDIENTE DE POSTULACIÓN A EVALUAR:
+Nombre Completo: {application.nombres} {application.apellidos}
+Correo Electrónico: {application.email}
+Teléfono: {application.telefono or 'No registrado'}
+Fecha de Envío: {application.fecha_envio}
+
+ANTECEDENTES DECLARADOS POR EL POSTULANTE:
+{application.antecedentes_academicos or 'Sin descripción manual adicional.'}
+
+CONTENIDO EXTRAÍDO DEL CURRÍCULUM VITAE Y DOCUMENTOS ADJUNTOS:
+{docs_summary[:12000]}
+
+CATEGORÍAS ESTATUTARIAS DE MIEMBROS EN ABOCCRIM:
+{categorias_desc}
+
+Por favor, genera el dictamen técnico en el JSON solicitado:"""
+
+        try:
+            ai_response = LLMService.generate_content(prompt=prompt, system_instruction=system_instruction)
+
+            # Limpiar posibles bloques markdown ```json ... ```
+            clean_text = ai_response.strip()
+            clean_text = re.sub(r'^```(?:json)?\s*', '', clean_text, flags=re.IGNORECASE)
+            clean_text = re.sub(r'\s*```$', '', clean_text)
+            match = re.search(r'\{.*\}', clean_text, re.DOTALL)
+            if match:
+                clean_text = match.group(0)
+
+            result_data = json.loads(clean_text)
+
+            # Validar y normalizar campos
+            if 'score' not in result_data:
+                result_data['score'] = 75
+            if 'recomendacion' not in result_data:
+                result_data['recomendacion'] = 'Aprobación de Incorporación' if result_data.get('score', 0) >= 60 else 'Rechazo de Solicitud'
+            if 'categoriaId' not in result_data and categorias:
+                result_data['categoriaId'] = categorias[0]['id']
+                result_data['categoriaSugerida'] = categorias[0]['nombre']
+
+            registrar_auditoria(
+                request=request,
+                accion='ANALISIS_IA_CURRICULAR',
+                entidad='SolicitudIncorporacion',
+                registro_afectado_id=application.id,
+                detalle=f"Análisis con IA realizado para solicitud #{application.id} ({application.nombres} {application.apellidos}). Score: {result_data.get('score')}/100.",
+            )
+
+            return Response(result_data, status=status.HTTP_200_OK)
+
+        except Exception as err:
+            logger.exception(f"Error en análisis IA de solicitud #{application.id}: {err}")
+            return Response(
+                {'detail': f'Error al procesar el análisis curricular con IA: {str(err)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class SolicitudIncorporacionAutoEvaluateView(views.APIView):
+    """
+    POST /api/v1/incorporacion/solicitudes/<int:pk>/auto-evaluar/
+    Ejecuta el dictamen y resolución automática con IA (Google Gemini),
+    aprobando e incorporando al postulante o rechazando y enviando el correo institucional
+    con los motivos técnicos detallados de forma inmediata.
+    """
+    permission_classes = [IsAuthenticated, CanEvaluateIncorporation]
+
+    def post(self, request, pk):
+        application = SolicitudIncorporacion.objects.filter(pk=pk).first()
+        if not application:
+            return Response({'detail': 'La solicitud no existe.'}, status=status.HTTP_404_NOT_FOUND)
+
+        decision = evaluate_and_decide_application(application.id)
+        if not decision:
+            return Response(
+                {'detail': 'No se pudo procesar la auto-evaluación o la solicitud ya cuenta con resolución formal previa.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        application.refresh_from_db()
+        detail_data = SolicitudIncorporacionReviewDetailSerializer(application, context={'request': request}).data
+        return Response({
+            'mensaje': f'Auto-evaluación con IA completada exitosamente. Resultado: {decision.resultado.upper()}.',
+            'decision': DecisionIncorporacionSerializer(decision).data,
+            'solicitud': detail_data,
+        }, status=status.HTTP_200_OK)
+
+

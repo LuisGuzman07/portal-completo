@@ -12,6 +12,8 @@ from .views import (
     SolicitudIncorporacionEvaluateView,
     SolicitudIncorporacionReviewDetailView,
     SolicitudIncorporacionReviewListView,
+    SolicitudIncorporacionAiAnalysisView,
+    SolicitudIncorporacionAutoEvaluateView,
 )
 
 urlpatterns = [
@@ -26,6 +28,8 @@ urlpatterns = [
     path('incorporacion/solicitudes/seguimiento/documentos/', SolicitudIncorporacionSupportingDocumentsView.as_view(), name='solicitud-incorporacion-supporting-documents'),
     path('incorporacion/solicitudes/revision/', SolicitudIncorporacionReviewListView.as_view(), name='solicitudes-incorporacion-review-list'),
     path('incorporacion/solicitudes/<int:pk>/revision/', SolicitudIncorporacionReviewDetailView.as_view(), name='solicitud-incorporacion-review-detail'),
+    path('incorporacion/solicitudes/<int:pk>/analisis-ia/', SolicitudIncorporacionAiAnalysisView.as_view(), name='solicitud-incorporacion-ai-analysis'),
+    path('incorporacion/solicitudes/<int:pk>/auto-evaluar/', SolicitudIncorporacionAutoEvaluateView.as_view(), name='solicitud-incorporacion-auto-evaluar'),
     path('incorporacion/solicitudes/<int:pk>/evaluaciones/', SolicitudIncorporacionEvaluateView.as_view(), name='solicitud-incorporacion-evaluate'),
     path('incorporacion/solicitudes/<int:pk>/decision/', SolicitudIncorporacionDecisionView.as_view(), name='solicitud-incorporacion-decision'),
     path('incorporacion/solicitudes/<int:solicitud_id>/documentos/<int:documento_id>/download/', DocumentoSolicitudReviewDownloadView.as_view(), name='solicitud-documento-download'),
